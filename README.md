@@ -4,7 +4,7 @@ Ce plugin est une version simplifiée de celui utilisé pour le projet Eman.
 
 Il permet de gérer l'affichage des pages items via une interface graphique, sans avoir à retoucher les fichiers de thème.
 
-Pré-requis : pour profiter de la présentaiton en deux colonnes, le thème doit utiliser le tag <aside>.
+Pré-requis : pour profiter de la présentaiton en deux colonnes, le thème doit utiliser le tag "aside".
 
 ------
 
