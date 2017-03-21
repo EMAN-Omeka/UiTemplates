@@ -14,10 +14,6 @@ echo head(array('title' => metadata('item', array('Dublin Core', 'Title')),'body
 	
 <?php echo $content; ?>
 
-<?php 
-// 	$tags = get_recent_tags(array('sort' => 'alpha'), 500); 
-	echo tag_cloud($item, 'items/browse', 8, true, 'after'); 
-?>
 <!-- 
 <ul class="item-pagination navigation">
 <li id="previous-item" class="previous"><?php echo link_to_previous_item_show(); ?></li>

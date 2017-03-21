@@ -1,6 +1,79 @@
 <?php
 class UiTemplates_PageController extends Omeka_Controller_AbstractActionController
 {
+	public function getFileForm()
+	{	
+		// Retrieve config for this item type from DB
+		$db = get_db();
+		$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = 'Files'")->fetchAll();
+		$config = array_pop($config);
+		$config = unserialize(base64_decode($config['text']));			
+		$form = new Zend_Form();
+		$form->setName('UITemplatesFilesForm');
+		// Get DC list
+		$fields = $this->getDC();
+		// Add cusotm fields
+		array_push($fields, 'nomoriginal', 'poids', 'taille', 'autresfichiers', 'format', 'titrechamps', 'titretranscription', 'titreinfos', 'titreexports', 'auteurtrans', 'titresocial', 'titrecitation'); 
+		
+		foreach ($fields as $field) {
+			$fieldName = new Zend_Form_Element_Text($field);
+			$fieldName->setValue($config[$field]);
+			$fieldName->setLabel($field);
+			$form->addElement($fieldName);
+		}
+
+		// Checkbox utiliser le template oui/non
+		$use_ui_templates = new Zend_Form_Element_Checkbox('use_ui_file_template');
+		$use_ui_templates->setLabel('Remplacer files/show ?');
+		$use_ui_templates->setValue(get_option('use_ui_file_template'));
+		$form->addElement($use_ui_templates);
+	
+	
+		$submit = new Zend_Form_Element_Submit('submit');
+		$submit->setLabel('Save Template');
+		$form->addElement($submit);
+			
+		return $this->prettifyForm($form);
+	}
+
+	public function getCollectionForm()
+	{
+		// Retrieve config for this item type from DB
+		$db = get_db();
+		$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = 'Collections'")->fetchAll();
+		$config = array_pop($config);
+		$config = unserialize(base64_decode($config['text']));
+
+		$blocks['plugin_citation'] = "Citation";
+		
+		$form = new Zend_Form();
+		$form->setName('UITemplatesCollectionForm');
+		// Get DC list
+		$fields = $this->getDC();
+		// Add custom fields
+		array_push($fields, 'dossiers', 'documents', 'titrechamps', 'titreexports', 'titrecitation', 'titresocial'); 
+		
+		foreach ($fields as $field) {
+			$fieldName = new Zend_Form_Element_Text($field);
+			$fieldName->setValue($config[$field]);
+			$fieldName->setLabel($field);
+			$form->addElement($fieldName);
+		}
+
+		// Checkbox utiliser le template oui/non
+		$use_ui_templates = new Zend_Form_Element_Checkbox('use_ui_collection_template');
+		$use_ui_templates->setLabel('Remplacer collections/show ?');
+		$use_ui_templates->setValue(get_option('use_ui_collection_template'));
+		$form->addElement($use_ui_templates);
+	
+	
+		$submit = new Zend_Form_Element_Submit('submit');
+		$submit->setLabel('Save Template');
+		$form->addElement($submit);
+			
+		return $this->prettifyForm($form);
+	}
+	
 	public function getItemForm()
 	{        
         $form = new Zend_Form();
@@ -28,7 +101,8 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
        	plugin_is_active('SocialBookmarking') ? $blocks['plugin_social'] = "Social Networks" : null; 
        	plugin_is_active('EmanCitation') ? $blocks['plugin_citation'] = "Citation" : null; 
        	plugin_is_active('Geolocation') ? $blocks['plugin_geoloc'] = "G&eacute;olocalisation" : null;
-       	       	
+       	plugin_is_active('Commenting') ? $blocks['plugin_comment'] = "Commentaires" : null;
+       	
        	foreach ($blocks as $id => $block) {
        			$blockSelects = array();
 
@@ -113,7 +187,7 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
        	// Checkbox utiliser le template oui/non
        	$use_ui_templates = new Zend_Form_Element_Checkbox('use_ui_item_template');
        	$use_ui_templates->setLabel('Remplacer items/show ?');
-       	$use_ui_templates->setValue(get_option('use_ui_item_templates'));
+       	$use_ui_templates->setValue(get_option('use_ui_item_template'));
        	$form->addElement($use_ui_templates);
        	
        	
@@ -134,6 +208,14 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 				$form = $this->getItemForm();
 				$this->view->type = "Items";				
 				break;
+			case 'collection' :
+				$form = $this->getCollectionForm();
+				$this->view->type = "Collections";				
+				break;				
+			case 'file' :
+				$form = $this->getFileForm();
+				$this->view->type = "Files";				
+				break;				
 		}
 		
 		if ($this->_request->isPost()) {
@@ -148,6 +230,10 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 				// Reorganize form values to fit config array format
 				$config = array();
 				switch ($type) {
+					case 'collection' :
+					case 'file' :
+						$config = $blocs;
+						break;
 					case 'item' :
 						$config['collection_link'] = $blocs['collection_link'];
 						unset($blocs['collection_link']);

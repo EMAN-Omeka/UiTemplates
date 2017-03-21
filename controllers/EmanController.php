@@ -1,6 +1,51 @@
 <?php
 class UiTemplates_EmanController extends Omeka_Controller_AbstractActionController
 {
+
+	public function filesShowAction()
+	{
+		$fileId = $this->view->collectionId = $this->getParam('id');
+		$file = get_record_by_id('file', $fileId);
+		if (! $file) {
+			throw new Zend_Controller_Action_Exception('This page does not exist', 404);
+			return;
+		}
+		set_current_record('file', $file);
+		
+		$db = get_db();
+		$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = 'Files'")->fetchAll();
+		$config = array_pop($config);
+		$config = unserialize(base64_decode($config['text']));
+		
+		foreach ($config as $key => $val) {
+			$config[$key] ? $this->view->{$key} = $config[$key] : $this->view->{$key} = '';				
+		}
+		$this->view->exports = $this->displayExports();
+		$this->view->citation = '<div class="element-text field-uitemplates field-uitemplates-citation" id="citation">' . EmanCitationPlugin::citationTokens(metadata('file', 'id'), 'file') . '</div>';		
+	}	
+	public function collectionsShowAction()
+	{
+		$collectionId = $this->view->collectionId = $this->getParam('id');
+		$collection = get_record_by_id('collection', $collectionId);
+		if (! $collection) {
+			throw new Zend_Controller_Action_Exception('This page does not exist', 404);
+			return;
+		}
+		set_current_record('collection', $collection);
+		
+		$db = get_db();
+		$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = 'Collections'")->fetchAll();
+		$config = array_pop($config);
+		$config = unserialize(base64_decode($config['text']));
+				
+		foreach ($config as $key => $val) {
+			$config[$key] ? $this->view->{$key} = $config[$key] : $this->view->{$key} = '';				
+		}
+		
+		$this->view->citation = '<div class="element-text field-uitemplates field-uitemplates-citation" id="citation">' . EmanCitationPlugin::citationTokens(metadata('collection', 'id'), 'collection') . '</div>';
+		
+		$this->view->exports = $this->displayExports();
+	}	
 	public function itemsShowAction()
 	{
 		
@@ -14,6 +59,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		$collection = get_collection_for_item();
 		if ($collection) {
 			set_current_record('collection', $collection);
+			$collectionId = $collection->id;
 		}
 		// Convert element's ids to text ids
 		$db = get_db();
@@ -30,7 +76,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		$config = unserialize(base64_decode($config['text']));
 		$collection_link = $config['collection_link'];
     unset($config['collection_link']);
-    unset($config['use_ui_item_templates']);
+    unset($config['use_ui_item_template']);
 		// Format each selected data from config for display
 		$column1 = $column2 = "";
 		foreach($config as $block => $fields) {				
@@ -65,28 +111,46 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 					case 'plugin_geoloc' : 
  						$blockContent = $this->displayMap($item);
 						break;
-					case 'plugin_export' : 
-						$blockContent = '<span id="jspdf" style="float:left;clear:left;margin-right:15px;"><img src="' . WEB_ROOT . '/themes/eman/images/pdf.png" alt="pdf"/></span>';
-						$blockContent .= $this->displayExports();
+					case 'plugin_comment' : 
+						$blockContent = $this->displayComments($item);
 						break;
+						case 'plugin_export' : 
+						$blockContent = '';//'<span id="jspdf" style="float:left;clear:left;margin-right:15px;"><img src="' . WEB_ROOT . '/themes/eman/images/pdf.png" alt="pdf"/></span>';
+						$blockContent .= $this->displayExports();
+						break;					
 				}
+
 			foreach($fields as $fieldName => $dataId) {				
+				$fieldContent = "";				
 				if (is_numeric($dataId)) {
 						if ($fields['name_' . $fieldName] <> null) {
 							$fieldTitle = $fields['name_' . $fieldName];
 						} else {
 							$fieldTitle = $elements[$dataId]['name'];
 						}
-					$fieldContent =  metadata('item', array($elements[$dataId]['set'], $elements[$dataId]['name']));
-					if ($fieldContent) { 
-						if ($elements[$dataId]['name'] == 'Type') {
-								$fieldContent = "<a href='" . WEB_ROOT . "/items/browse?search=&advanced[1][element_id]=51&advanced[1][type]=is+exactly&advanced[1][terms]=$fieldContent'>$fieldContent</a>"; 
-						}
-						if (filter_var($fieldContent, FILTER_VALIDATE_URL)) {
-							$fieldContent = "<a target='_blank' href='$fieldContent'>$fieldContent</a>";
-						}
-						
-  					$fieldTitle = "<span style='font-weight:bold;'>$fieldTitle</span> : ";		
+					$fieldData = metadata('item', array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));
+					$fieldContent = array();
+					foreach($fieldData as $i => $fieldInstance ) {
+						if ($fieldInstance) { 
+							// Field contains exactly an URL : link in a new window 
+							if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
+								$fieldInstance = '<a target="_blank" href="$fieldInstance">$fieldInstance</a>';
+							}
+							// Type field : create a link to items/browse
+							if ($elements[$dataId]['name'] == 'Type') {
+								$fieldInstance = "<a href='" . WEB_ROOT . "/items/browse?type=" . urlencode($fieldInstance) . "'>$fieldInstance</a>";
+							}
+							$fieldContent[] = $fieldInstance;
+						}												
+					}
+					// If field contains something, display it
+					if (count($fieldContent) > 1) {
+						$fieldContent = "<ul class='eman-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
+					} elseif ($fieldContent) {
+						$fieldContent = $fieldContent[0];
+					}
+					if ($fieldContent) {
+	  				$fieldTitle = "<span style='font-weight:bold;'>$fieldTitle</span> : ";		
 						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle $fieldContent</div>";
 					}
 				}
@@ -118,7 +182,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 				$edit_link = "<a class='eman-edit-link' href='" . WEB_ROOT . "/admin/items/edit/$itemId'>Editer ce contenu</a>";
 			}
 		}
-		$this->view->edit_link = $edit_link;
+		isset($edit_link) ? $this->view->edit_link = $edit_link : $this->view->edit_link = "";
 		$this->view->content = "<div id='primary'>$column1</div><aside id='sidebar'>$column2</aside>"; 	
 	}
 	public function displayFiles($item) {
@@ -186,6 +250,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		);
 		return $content;
 	}
+	
 	public function displayMap($item) {
 		$viewRenderer = Zend_Controller_Action_HelperBroker::getStaticHelper('viewRenderer');
 		if (null === $viewRenderer->view) {
@@ -194,7 +259,12 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		$view = $viewRenderer->view;		
 		$content = get_specific_plugin_hook_output('Geolocation', 'public_items_show', array('view' => $view, 'item' => $item));
 		return $content;
-	}	
+	}
 
+	public function displayComments($item) {
+// 		$comments = CommentingPlugin::showComments();
+		$comments = get_specific_plugin_hook_output('Commenting', 'public_items_show', array('view' => $this, 'item' => $item));
+		return $comments;
+	}	
 }
 
