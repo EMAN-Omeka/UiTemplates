@@ -11,14 +11,14 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 {
 
   protected $_hooks = array(
+  		'define_acl',
   		'install',
   		'define_routes',  		
   );
   
   protected $_filters = array(
   	'admin_navigation_main',
-  );  
-
+  );    
   function hookDefineRoutes($args)
   {
 
@@ -36,10 +36,11 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   								'type'				 => ''
   						)
   				)
-  		);		
+  		);
+ 		
   		if (! is_admin_theme()) {
 	  		// If template is used, override Omeka items/show display
-	  		$ui_template = get_option('use_ui_item_template');  		
+	  		$ui_template = get_option('use_ui_item_template'); 		
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_item',
@@ -54,9 +55,52 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 		  				)
 		  		);
 	  		}
+	   		// If template is used, override Omeka  collections/show display
+	  		$ui_template = get_option('use_ui_collection_template');  		
+	  		if ($ui_template && ! isset($_GET['output'])) {
+		   		$router->addRoute(
+		  				'uitemplates_show_collection',
+		  				new Zend_Controller_Router_Route(
+		  						'collections/show/:id', 
+		  						array(
+		  								'module' => 'ui-templates',
+		  								'controller'   => 'eman',
+		  								'action'       => 'collections-show',
+		  								'id'					=> ''
+		  						)
+		  				)
+		  		);
+	  		}
+	     	// If template is used, override Omeka collections/show display
+	  		$ui_template = get_option('use_ui_file_template');  		
+	  		if ($ui_template && ! isset($_GET['output'])) {
+		   		$router->addRoute(
+		  				'uitemplates_show_file',
+		  				new Zend_Controller_Router_Route(
+		  						'files/show/:id', 
+		  						array(
+		  								'module' => 'ui-templates',
+		  								'controller'   => 'eman',
+		  								'action'       => 'files-show',
+		  								'id'					=> ''
+		  						)
+		  				)
+		  		);
+	  		}
   		}
   }
 
+  function hookDefineAcl($args)
+  {
+  	$acl = $args['acl'];
+  	$uiTemplatesAdmin = new Zend_Acl_Resource('UiTemplates_Page');
+  	$acl->add($uiTemplatesAdmin);
+  	 
+//   	$acl->allow(array('super', 'admin'), array('UiTemplatesAdmin'));
+//   	$acl->allow(null, 'uitemplates_item_form', 'show');
+//   	$acl->deny(null, 'SimplePages_Page', 'show-unpublished');
+  }
+  
   /**
    * Add the pages to the public main navigation options.
    *
@@ -67,7 +111,8 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   {
     $nav[] = array(
                     'label' => __('UI Templates'),
-                    'uri' => url('uitemplate/item')
+                    'uri' => url('uitemplate/item'),
+    								'resource' => 'UiTemplates_Page',		
                   );
     return $nav;
   }
@@ -88,12 +133,20 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 	  
 	  $this->_installOptions();
   }  
-  static function displayCollectionDC($collection, $dc, $title) {
-		$meta = metadata($collection, array('Dublin Core', $dc), array('delimiter'=>'<br />'));
-		if (strlen($meta) > 150) {
-			$meta = "<div style='padding-left:2em;text-align:justify;'>$meta</div>";
+  
+  static function displayObjectDC($object, $dc, $title) {
+ 		$metas = metadata($object, array('Dublin Core', $dc), array('all' => true, 'no_filter' => true));  		
+ 		foreach ($metas as $i => $meta) {
+ 			if (strlen($meta) > 150) {
+ 				$metas[$i] = "<div style='padding-left:2em;text-align:justify;'>$meta</div>";
+ 			}
+ 		}
+ 		if ($title) : $title .= ' : '; endif;
+		if (count($metas) > 1) {
+			$metas = "<strong>$title</strong><ul class='eman-list'><li><!-- (DC.$dc) -->" . implode("</li><li>", $metas) . "</li></ul>";
+		} else {
+			$metas = "<strong>$title</strong><!-- (DC.$dc) -->" . $metas[0] . "<br />";
 		}
-		$meta = "<span class='dclabel'><strong>$title</strong></span><!-- (DC.$dc) --> : $meta<br /><br />";
-  	return $meta;  	  	
+  	return $metas;  	  	
   }
 }
