@@ -40,7 +40,7 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
  		
   		if (! is_admin_theme()) {
 	  		// If template is used, override Omeka items/show display
-	  		$ui_template = get_option('use_ui_item_template'); 		
+	  		$ui_template = get_option('use_ui_items_template'); 		
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_item',
@@ -54,9 +54,25 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 		  						)
 		  				)
 		  		);
+		   		// Exhibit Builder
+		   		if (plugin_is_active('ExhibitBuilder')) {
+			   		$router->addRoute(
+			   				'uitemplates_exhibit_show_item',
+			   				new Zend_Controller_Router_Route(
+			   						'exhibits/show/:slug/item/:id',
+			   						array(
+			   								'module' => 'ui-templates',
+			   								'controller'   => 'eman',
+			   								'action'       => 'items-show',
+			   								'id'					=> '',
+			   								'slug' => '',
+			   						)
+			   				)
+			   		);
+		   		}		   		
 	  		}
 	   		// If template is used, override Omeka  collections/show display
-	  		$ui_template = get_option('use_ui_collection_template');  		
+	  		$ui_template = get_option('use_ui_collections_template');  		
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_collection',
@@ -72,7 +88,7 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 		  		);
 	  		}
 	     	// If template is used, override Omeka collections/show display
-	  		$ui_template = get_option('use_ui_file_template');  		
+	  		$ui_template = get_option('use_ui_files_template');  		
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_file',
@@ -95,10 +111,6 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   	$acl = $args['acl'];
   	$uiTemplatesAdmin = new Zend_Acl_Resource('UiTemplates_Page');
   	$acl->add($uiTemplatesAdmin);
-  	 
-//   	$acl->allow(array('super', 'admin'), array('UiTemplatesAdmin'));
-//   	$acl->allow(null, 'uitemplates_item_form', 'show');
-//   	$acl->deny(null, 'SimplePages_Page', 'show-unpublished');
   }
   
   /**
@@ -134,11 +146,12 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 	  $this->_installOptions();
   }  
   
-  static function displayObjectDC($object, $dc, $title) {
- 		$metas = metadata($object, array('Dublin Core', $dc), array('all' => true, 'no_filter' => true));  		
+  static function displayObjectDC($object, $dc, $title, $itemset = 'Dublin Core') {
+ 		$metas = metadata($object, array($itemset, $dc), array('all' => true, 'no_filter' => true));
+//  		Zend_Debug::dump($metas);  		
  		foreach ($metas as $i => $meta) {
  			if (strlen($meta) > 150) {
- 				$metas[$i] = "<div style='padding-left:2em;text-align:justify;'>$meta</div>";
+ 				$metas[$i] = "<div style='text-align:justify;'>$meta</div>";
  			}
  		}
  		if ($title) : $title .= ' : '; endif;
