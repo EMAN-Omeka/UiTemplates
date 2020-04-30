@@ -1,165 +1,200 @@
 <?php
 class UiTemplates_EmanController extends Omeka_Controller_AbstractActionController
 {
-public function buildContent($entity) {
-  $type = get_class($entity);
-  $column1 = $column2 = "";
+  public function init() {
+    $this->lang = null;
+    $this->default_language = get_option('locale_lang_code');
+    if (plugin_is_active('Babel')) {    
+      $this->lang = getLanguageForOmekaSwitch();
+      $this->view->lang = $this->lang;
+      $this->traductions = unserialize(base64_decode(get_option('ui_templates_translations')));
+    }
+    $this->view->controller = $this;    
+  }
   
-	$db = get_db();
-	$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = '" . $type . "s'")->fetchAll();
-	$config = array_pop($config);
-	$config = unserialize(base64_decode($config['text']));
-	$elements = array();
-	$elData = $db->query("SELECT o.id, o.name, s.name setName FROM `$db->Elements` o, `$db->ElementSets` s WHERE o.element_set_id = s.id AND o.id IN (SELECT DISTINCT element_id FROM `$db->ElementTexts`) ORDER BY o.name");
-	$elData = $elData->fetchAll();
-	foreach($elData as $id => $element) {
-		$elements[$element['id']] = array("name" => $element['name'], "set" => $element['setName']);
-	}
-		foreach($config as $block => $fields) {				
-			$blockContent = "";
-			$content = array(); 
-			// Skip collection link option
-			if ($block == 'collection_link') {
-    		if ($fields == 1) {
-      		set_current_record('item', $entity); 		
-    			$this->view->collection_link = '<div style="background: transparent; border:none;box-shadow:none;margin:0;padding:0;"><span class="dclabel">Collection : </span>' . link_to_collection_for_item();  
-    			$collection = get_collection_for_item();
-    			$link_to_collection_items = WEB_ROOT . '/items/browse?collection=' . $collection->id;
-    			if ($collection) {
-      			$link_to_collection_items = WEB_ROOT . '/items/browse?collection=' . $collection->id;
-      			if ($collection->id) {
-        			$this->view->collection_link .= "&nbsp;-&nbsp;<a href='$link_to_collection_items'>Voir les autres notices de cette collection</a>";      
-      			}
-      		}
-          $this->view->collection_link .=  "</div>";      		
-    		}	else {
-    			$this->view->collection_link = '';
-    		}  			
-  			continue;
-			}
-			// We pop bloc properties from config
-			$options = $fields['options'];
-			// ... and unset the options value to loop through the fields
-			unset($fields['options']); 
-			$blockOrder = $options['order'];
-			$column = $options['column'];
-			
-			$t = strtolower($type);  			
-			// Plugins
-			switch ($block) { 
-				case 'plugin_files' : 						
-					$blockContent = $this->displayFiles($entity);
-					break;
-				case 'plugin_gallery' : 
-					$blockContent = $this->displayGallery($entity);
-					break;
-			  case 'plugin_social' : 
-					$blockContent = $this->displaySocial($entity);
-					break;
-				case 'plugin_citation' :
-					$blockContent = EmanCitationPlugin::citationTokens(metadata($t,'id'), $t);
-					break;
-				case 'plugin_tags' : 
-					$blockContent = tag_string($entity);
-					break;
-				case 'plugin_relations' : 
-						$blockContent = $this->displayRelations($entity->id);
-					break;
-				case 'plugin_geoloc' : 
-						$blockContent = $this->displayMap($entity);
-					break;
-				case 'plugin_comment' : 
-					$blockContent = $this->displayComments($entity);
-					break;
-			  case 'plugin_export' : 
-					$blockContent = '';
-					$blockContent .= $this->displayExports();
-					break;					
-				case 'plugin_children' : 
-					$blockContent = $this->displayChildrenCollections($entity);
-					break;						
-				case 'plugin_items' : 
-					$blockContent = $this->displayItems($entity);
-					break;						
-				case 'plugin_file' : 
-					$blockContent = $this->displayFile($entity);
-					break;						
-				case 'plugin_fileinfo' : 
-					$blockContent = $this->displayFileInfo($entity);
-					break;						
-/*
-				case 'plugin_transcript' : 
-					$blockContent = $this->displayTranscription($entity);
-					break;		
-*/				
-		  }
-
-			foreach($fields as $fieldName => $dataId) {				
-				$fieldContent = "";				
-				if (is_numeric($dataId) && $dataId <> 0) {
-  				if (isset($fields['name_' . $fieldName])) {
-						if ($fields['name_' . $fieldName] <> null) {
-							$fieldTitle = $fields['name_' . $fieldName];
-						} else {
-							$fieldTitle = $elements[$dataId]['name'];
-						}
-				  }
-				  // Exception pour bloc Item Relations
-				  if (substr($fieldName, 0, 4) == 'bloc' || substr($fieldName, 0, 16) == 'plugin_relations' ) {				  
-  					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));	
-            $fieldContent = array();
-  					foreach($fieldData as $i => $fieldInstance ) {
-  						if ($fieldInstance) { 
-  							// Field contains exactly an URL : link in a new window 
-  							if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
-  								$fieldInstance = '<a target="_blank" href="$fieldInstance">$fieldInstance</a>';
-  							}
-  							// Type field : create a link to items/browse
-  							if ($elements[$dataId]['name'] == 'Type') {
-  								$fieldInstance = "<a href='" . WEB_ROOT . "/items/browse?type=" . urlencode($fieldInstance) . "'>$fieldInstance</a>";
-  							}
-  							$fieldContent[] = $fieldInstance;
-  						}												
-  					}
-  					// If field contains something, display it
-  					if (count($fieldContent) > 1) {
-  						$fieldContent = "<ul class='eman-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
-  					} elseif ($fieldContent) {
-  						$fieldContent = $fieldContent[0];
-  					}
-
-  					if ($fieldContent) {
-  	  				$fieldTitle = "<span style='font-weight:bold;'>$fieldTitle</span> : ";		
-  						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle $fieldContent</div>";
-  					}
+  public function buildContent($entity) {
+    $type = get_class($entity);
+    $column1 = $column2 = "";  
+  	$db = get_db();
+  	$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = '" . $type . "s'")->fetchAll();
+  	$config = array_pop($config);
+  	$config = unserialize(base64_decode($config['text']));
+  	$elements = array();
+  	$elData = $db->query("SELECT o.id, o.name, s.name setName FROM `$db->Elements` o, `$db->ElementSets` s WHERE o.element_set_id = s.id AND o.id IN (SELECT DISTINCT element_id FROM `$db->ElementTexts`) ORDER BY o.name");
+  	$elData = $elData->fetchAll();
+  	foreach($elData as $id => $element) {
+  		$elements[$element['id']] = array("name" => $element['name'], "set" => $element['setName']);
+  	}
+  		foreach($config as $block => $fields) {				
+  			$blockContent = "";
+  			$content = array(); 
+  			// Skip collection link option
+  			if ($block == 'collection_link') {
+      		if ($fields == 1) {
+        		set_current_record('item', $entity); 		
+      			$this->view->collection_link = '<div style="background: transparent; border:none;box-shadow:none;margin:0;padding:0;"><span class="dclabel">' . $this->t('Autres notices de la collection') . ' : </span>' . link_to_collection_for_item();  
+      			$collection = get_collection_for_item();
+      			if ($collection) {
+        			$link_to_collection_items = WEB_ROOT . '/items/browse?collection=' . $collection->id;
+        			if ($collection->id) {
+          			$this->view->collection_link .= "&nbsp;-&nbsp;<a href='$link_to_collection_items'>" . $this->t('Voir les autres notices de cette collection') . "</a>";      
+        			}
+        		}
+            $this->view->collection_link .=  "</div>";      		
+      		}	else {
+      			$this->view->collection_link = '';
+      		}  			
+    			continue;
+  			}
+  			// We pop bloc properties from config
+  			$options = $fields['options'];
+  			// ... and unset the options value to loop through the fields
+  			unset($fields['options']); 
+  			$blockOrder = $options['order'];
+  			$column = $options['column'];
+  			
+  			$t = strtolower($type);  			
+  			// Plugins
+  			switch ($block) { 
+  				case 'plugin_files' : 						
+  					$blockContent = $this->displayFiles($entity);
+  					break;
+  				case 'plugin_gallery' : 
+  					$blockContent = $this->displayGallery($entity);
+  					break;
+  			  case 'plugin_social' : 
+  					$blockContent = $this->displaySocial($entity);
+  					break;
+  				case 'plugin_citation' :
+  					$blockContent = EmanCitationPlugin::citationTokens(metadata($t,'id'), $t);
+  					break;
+  				case 'plugin_tags' : 
+  					$blockContent = $this->tag_string_eman($entity);
+  					break;
+  				case 'plugin_relations' : 
+  						$blockContent = $this->displayRelations($entity->id);
+  					break;
+  				case 'plugin_collection_relations' : 
+  						$blockContent = $this->displayCollectionRelations($entity->id);
+  					break;
+  				case 'plugin_file_relations' : 
+  						$blockContent = $this->displayFileRelations($entity->id);
+  					break;
+  				case 'plugin_geoloc' : 
+  						$blockContent = $this->displayMap($entity);
+  					break;
+  				case 'plugin_comment' : 
+  					$blockContent = $this->displayComments($entity);
+  					break;
+  			  case 'plugin_export' : 
+  					$blockContent = '';
+  					$blockContent .= $this->displayExports();
+  					break;					
+  				case 'plugin_children' : 
+  					$blockContent = $this->displayChildrenCollections($entity);
+  					break;						
+  				case 'plugin_items' : 
+  					$blockContent = $this->displayItems($entity);
+  					break;						
+  				case 'plugin_file' : 
+  					$blockContent = $this->displayFile($entity);
+  					break;						
+  				case 'plugin_fileinfo' : 
+  					$blockContent = $this->displayFileInfo($entity);
+  					break;						
+  		  }
+  			foreach($fields as $fieldName => $dataId) {			
+  				$fieldContent = $fieldTitle = '';				
+  				if (is_numeric($dataId) && $dataId <> 0) {
+    				if ($this->lang) {
+      				if (isset($fields['name_' . $fieldName . '_' . $this->lang])) {
+    						if ($fields['name_' . $fieldName . '_' . $this->lang] <> null) {
+    							$fieldTitle = $fields['name_' . $fieldName . '_' . $this->lang];
+    						} else {
+    							$fieldTitle = $elements[$dataId]['name'];
+    						}
+    				  }       				
+    				} else {
+      				if (isset($fields['name_' . $fieldName])) {
+    						if ($fields['name_' . $fieldName] <> null) {
+    							$fieldTitle = $fields['name_' . $fieldName];
+    						} else {
+    							$fieldTitle = $elements[$dataId]['name'];
+    						}
+    				  }      				
+    				}
+  				  // Exception pour blocs Relations
+  				  if (substr($fieldName, 0, 4) == 'bloc' || in_array(substr($fieldName, 0, 16), array('plugin_relations', 'plugin_collection_relations'))) {	
+    					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));	
+              $fieldContent = array();
+    					foreach($fieldData as $i => $fieldInstance ) {
+    						if ($fieldInstance) { 
+    							// Field contains exactly an URL : link in a new window 
+    							if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
+    								$fieldInstance = "<a target='_blank' href='$fieldInstance'>$fieldInstance</a>";
+    							}
+    							// Type field : create a link to items/browse
+    							if ($elements[$dataId]['name'] == 'Type') {
+    								$fieldInstance = "<a href='" . WEB_ROOT . "/items/browse?type=" . urlencode($fieldInstance) . "'>$fieldInstance</a>";
+    							}
+    							$fieldContent[] = $fieldInstance;
+    						}												
+    					}
+    					// If field contains something, display it
+    					if (count($fieldContent) > 1) {
+      					natcasesort($fieldContent);
+    						$fieldContent = "<ul class='eman-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
+    					} elseif ($fieldContent) {
+    						$fieldContent = $fieldContent[0];
+    					}
+    					if ($fieldContent) {
+      					$maxLength = 1000;
+      					// If generating PDF or text too short, display as it is ...
+      					if (isset($_GET['context']) && $_GET['context'] == 'pdf' || strlen($fieldContent) < $maxLength) {
+      	  				$fieldTitle <> "" ? $fieldTitle = "<span style='font-weight:bold;'>$fieldTitle</span> : " : $fieldTitle = "";		
+      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle $fieldContent</div>";                                          		
+      					} else {
+        					// ... else hide text above $maxlength
+                  $fieldContentShort = $this->truncateHtml($fieldContent, $maxLength, '', false, true);  
+                  $fieldContentShort .= "<span class='suite'> ... Lire la suite </span>";  
+                  $fieldContentComplet = $fieldContent . '<span class="replier"><br />Retour à la version r&eacute;duite</span></span>';
+      	  				$fieldTitle = "<span style='font-weight:bold;'>$fieldTitle</span> : ";		
+      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle<div class='fieldcontentshort'>$fieldContentShort</div><div class='fieldcontentcomplet' style='display:none;'>$fieldContentComplet</div></div>";
+                }
+    					}
+    				}
   				}
-				}
-			}
-			
-			if ($blockContent) {
-				if ($config[$block]['options']['display']) {
-					$blockTitle = "<h2>" . $config[$block]['options']['title'] . "</h2>";
-				} else {
-					$blockTitle = "";
-				}
-        if ($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) {
- 				  $content[$block] = "<div class='field-uitemplates field-uitemplates-$block' id='$block'>$blockTitle $blockContent</div>";            
-				}
-			}			
-			// Channel output to column choosen in config
-			if ($column == 1) {
-				$column1 .= implode('', $content);
-			} elseif ($column == 2) {
-				$column2 .= implode('', $content);
-			}					
-		}
-		if ($column2 && $column1) {
-  		$content = "<div id='primary'>$column1</div><aside id='sidebar'>$column2</aside>";
-		} else {
-  		$content = "<div id='primary' style='width:99%;'>$column1$column2</div>";
-		}
-    return $content;
-}
+  			}
+  			if ($blockContent) {
+ 					$blockTitle = "";
+  				if ($config[$block]['options']['display']) {
+    				if ($this->lang) {
+              $config[$block]['options']['title'][$this->lang] <> "" ? $blockTitle = $config[$block]['options']['title'][$this->lang] : $blockTitle = $config[$block]['options']['title'][$this->default_language];              
+            } else {
+      				$blockTitle = $config[$block]['options']['title'];
+    				}
+    				if ($blockTitle) {
+    					$blockTitle = "<h2>" . $blockTitle . "</h2>";      				
+    				}
+  				}
+          if ($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) {
+   				  $content[$block] = "<div class='field-uitemplates field-uitemplates-$block' id='$block'>$blockTitle $blockContent</div>";            
+  				}
+  			}			
+  			// Channel output to column choosen in config
+  			if ($column == 1) {
+  				$column1 .= implode('', $content);
+  			} elseif ($column == 2) {
+  				$column2 .= implode('', $content);
+  			}					
+  		}
+  		if ($column2 && $column1) {
+    		$content = "<div id='primary'>$column1</div><aside id='sidebar'>$column2</aside>";
+  		} else {
+    		$content = "<div id='primary' style='width:99%;'>$column1$column2</div>";
+  		}  		
+      return $content;
+  }
 
 	public function filesShowAction()
 	{
@@ -202,24 +237,6 @@ public function buildContent($entity) {
     
     $this->view->content = $this->buildContent($item);
     
-    // Lien vers la collection ?  
-/*
-		if ($collection_link && isset($collection)) {
-			$this->view->collection_link = '<p id="linkHome"><span class="dclabel">Collection : </span>' . link_to_collection() . ' <br />';  
-		}	else {
-			$this->view->collection_link = '';
-		}
-*/
-		// Edit link for Item
-/*
-		if ($currentUser = current_user()) {		
-			if (in_array($currentUser->role, array('super', 'admin', 'editor'))) {
-				$edit_link = "<a class='eman-edit-link' href='" . WEB_ROOT . "/admin/items/edit/$itemId'>Editer ce contenu</a>";
-			}
-		}
-		isset($edit_link) ? $this->view->edit_link = $edit_link : $this->view->edit_link = "";
-*/
-// 		$this->view->content = "<div id='primary'>$column1</div><aside id='sidebar'>$column2</aside>"; 	
 	}
 	
 	public function displayFiles($item) {
@@ -243,7 +260,7 @@ public function buildContent($entity) {
 				));
 				break;
 			} elseif ($file->getExtension() =='pdf') {
-				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'.metadata($file,'filename').'"></iframe>';	break;
+				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'. metadata($file,'filename').'"></iframe>';	break;
 			} else {
 				echo files_for_item();
 				break;
@@ -254,6 +271,7 @@ public function buildContent($entity) {
 		ob_end_clean();
 		return $fileGallery;
 	}	
+	
 	public function displaySocial($entity) {
   	$type = get_class($entity);
   	if ($type == 'Item') {
@@ -266,6 +284,7 @@ public function buildContent($entity) {
       $hook = 'public_files_show';
       $entity_type = 'file';     	
   	}
+  	// Désactivé cause erreur "String could not be parsed as XML"
 		$socialPlugins = get_specific_plugin_hook_output('SocialBookmarking', $hook, array('view' => $this, $entity_type => $entity));		
 		return $socialPlugins;
 	}
@@ -273,12 +292,11 @@ public function buildContent($entity) {
 	public function displayGallery($item) {
 		$FilesGallery = "";
 		if (metadata($item, 'has files')) {
-			$FilesGallery .= '<span>' . count($item->Files) . ' fichier(s) </span><div id="itemfiles" class="element">';
+			$FilesGallery .= $this->t("En passant la souris sur une vignette, le titre de l'image apparait.") . "<br /><br />";  		
+			$FilesGallery .= '<span>' . count($item->Files) . ' ' . $this->t('Fichier(s)') . '</span><div id="itemfiles" class="element">';
 			$FilesGallery .= '<div id="files-carousel" style="width:450px;margin:0 auto;">';
-// 			 . files_for_item(array('linkToMetadata' => true, 'linkAttributes' => array('class' => 'file-display'))) . '</div>';
 			$FilesGallery .= file_markup($item->Files, array('linkToMetadata' => true));
-			$FilesGallery .= '</div>';
-			$FilesGallery .= '</div>';
+			$FilesGallery .= '</div></div>';
 		}
 		$FilesGallery = preg_replace('/<h3>[^>]+\<\/h3>/i', "", $FilesGallery);
 	
@@ -287,6 +305,19 @@ public function buildContent($entity) {
 	
 	public function displayRelations($item) {
 		$relations = get_specific_plugin_hook_output('ItemRelations', 'public_items_show', array('view' => $this, 'item' => $item));
+		$relations = str_replace('Ce document n\'a pas de relation indiquée avec un autre document du projet.', $this->t('Ce document n\'a pas de relation indiquée avec un autre document du projet.'), $relations);
+		$relations .= "<br />";		
+		return $relations;
+	}	
+
+	public function displayCollectionRelations($collection) {
+		$relations = get_specific_plugin_hook_output('CollectionRelations', 'public_collections_show', array('view' => $this, 'item' => $collection));
+		$relations .= "<br />";		
+		return $relations;
+	}	
+
+	public function displayFileRelations($file) {
+		$relations = get_specific_plugin_hook_output('FileRelations', 'public_files_show', array('view' => $this, 'item' => $file));
 		$relations .= "<br />";		
 		return $relations;
 	}	
@@ -330,11 +361,13 @@ public function buildContent($entity) {
 		if ($enfants) {
   		$count = count($enfants);
   		if ($count == 1) {
-        $count .= ' sous-collection';    		
+        $count .= ' ' . $this->t('sous-collection');    		
   		} else {
-        $count .= ' sous-collections';    		    		
+        $count .= ' ' . $this->t('sous-collections');    		    		
   		}
       $content = '<div class="collection-enfants">' . $count . ' : <ul>';
+
+      $enfants = $this->orderCollections($enfants);
   		foreach ($enfants as $id => $enfant) {
   			$content .= "<li><a href='" . WEB_ROOT . "/collections/show/" . $enfant['id'] . "'>" . $enfant['name'] . "</a></li>";			
   		} 
@@ -347,11 +380,26 @@ public function buildContent($entity) {
   
   public function displayItems($collection) { 
     $content = '<div id="collection-items" style="clear:both;display:block;overflow:auto;">';
-    $nbItems = metadata('collection', 'total_items');    
+    $nbItems = metadata('collection', 'total_items');  
     if ($nbItems > 0) {
-      $nbItems == 1 ? $notice = 'notice' : $notice = 'notices'; 
-      $content .= "<h4>$nbItems $notice dans cette collection.</h4>";
+      $nbItems == 1 ? $notice = $this->t('notice') : $notice = $this->t('notices');     
+      $content .= "<h4>$nbItems $notice " . $this->t('dans cette collection') . "</h4>";
+      $content .= $this->t("En passant la souris sur une vignette, le titre de l'image apparait.") . "<br /><br />" . $this->t("Les dernières notices saisies") . " :<br /><br />";
       $items = get_records('Item', array('collection_id' => metadata('collection', 'id')));
+      // Tri selon Item order
+      $db = get_db();
+      $query = "SELECT item_id, omeka_item_order_item_orders.order ordre FROM omeka_item_order_item_orders";
+      $ordre = $db->query($query)->fetchAll();
+      $order = array();
+      foreach ($ordre as $i => $vals) {
+        $order[$vals['item_id']] = $vals['ordre'];
+      }
+      foreach ($items as $id => $item) {
+        if (isset($order[$item->id])) {
+          $item['ordre'] = $order[$item->id];        
+        }
+      }
+      usort($items, function($a, $b) {return ($a['ordre'] < $b['ordre']) ? -1 : 1;});      
       foreach ($items as $id => $item) {    
         set_current_record('Item', $item);    
         $itemTitle = strip_formatting(metadata($item, array('Dublin Core', 'Title')));
@@ -359,22 +407,16 @@ public function buildContent($entity) {
         if (metadata($item, 'has thumbnail')) {
           $thumbnail = item_image('square_thumbnail', array('alt' => $itemTitle));
         } else {
-    		$thumbnail = "<img style='width:72px;height:72px;float:left;margin-bottom:0;' src='" . WEB_ROOT . "/themes/eman/images/eman-logo.png' />";          
+    		$thumbnail = "<img style='width:72px;height:72px;float:left;margin-bottom:0;' src='" . WEB_ROOT . "/themes/eman/images/eman-logo.png' title='$itemTitle'/>";          
         }
         $content .= link_to_item($thumbnail);
+
         $content .=  '</div>';
-/*
-        if ($text = metadata($item, array('Item Type Metadata', 'Text'), array('snippet'=>250))) {
-          $content .= '<div class="item-description"><p>' . $text . '</p></div>';
-        } elseif ($description = metadata($item, array('Dublin Core', 'Description'), array('snippet'=>250))) {
-          $content .= '<div class="item-description">' . $description . '</div>';
-        }
-*/
       }
     } else {
       $content .=  '<p>' . __("There are currently no items within this collection.") . '</p>';
-    }          
-    $content .= "</div><br /><br />Tous les documents : " . link_to_items_browse(__('Consulter', metadata('collection', array('Dublin Core', 'Title'))), array('collection' => metadata('collection', 'id')));
+    }
+    $content .= "</div><br /><br />" . $this->t("Tous les documents") . " : " . link_to_items_browse(__('Consulter', metadata('collection', array('Dublin Core', 'Title'))), array('collection' => metadata('collection', 'id')));
     return $content;
   }
  
@@ -408,11 +450,12 @@ public function buildContent($entity) {
         $fileTitle = '';
     }
   	$fileTitle = __('Fichier ') . $fileTitle;	   
-    $content = "Nom original : <a href='" . WEB_ROOT . "/files/original/$filen'>$fileOriginal</a><br/>";
-    $content .= "Extension : $fileFormat <br/>";
-    $content .= "Poids : $fileSize Mo<br />";    
+    $content = $this->t("Nom original") . " : $fileOriginal<br/>";
+    $content .= $this->t("Lien vers le") . " <a href='" . WEB_ROOT . "/files/original/$filen'>" . $this->t('fichier') . "</a><br/>";
+    $content .= $this->t("Extension") . " : $fileFormat <br/>";
+    $content .= $this->t("Poids") . " : $fileSize Mo<br />";    
     if (in_array($ext, array('jpg', 'jpeg', 'png'))) {
-      $content .= "Dimensions : " . round($size[0]) . " x " . round($size[1]) . " px<br/>";
+      $content .= $this->t("Dimensions") . " : " . round($size[0]) . " x " . round($size[1]) . " px<br/>";
     }
     return $content;
   }
@@ -446,4 +489,173 @@ public function buildContent($entity) {
     $content .= "</div>";
 		return $content;
 	}
+	
+   public function orderCollections($cols) {
+    $order = unserialize(get_option('sortcol_preferences'));
+    foreach ($cols as $id => $col) {
+      if (isset($order[$col['id']])) {
+        if ($order[$col['id']] <> "") {
+          $cols[$id]['ordre'] = $order[$col['id']];        
+        } else {
+          $cols[$id]['ordre'] = 0;
+        }
+      } else {
+        $cols[$id]['ordre'] = 0;          
+      }
+    }
+    $sansnumero = array_filter($cols, function($a) { if ($a['ordre'] == 0) {return true;} else {return false;} });
+    $avecnumero = array_filter($cols, function($a) { if ($a['ordre'] <> 0) {return true;} else {return false;} });
+    
+    setlocale(LC_COLLATE, 'fr_FR.utf8');
+    usort($avecnumero, function($a, $b) {return strnatcmp($a['name'], $b['name']);} );
+    usort($sansnumero, function($a, $b) {return strnatcmp($a['name'], $b['name']);} );
+    
+    $cols = $sansnumero;
+    foreach ($avecnumero as $i => $val) {
+      $cols[] = $val;
+    }
+    return $cols;
+  } 
+  	
+  public function tag_string_eman($recordOrTags = null, $link = 'items/browse', $delimiter = null) {
+    // Set the tag_delimiter option if no delimiter was passed.
+    if (is_null($delimiter)) {
+        $delimiter = get_option('tag_delimiter') . ' ';
+    }
+
+    if (!$recordOrTags) {
+        $tags = array();
+    } else if (is_string($recordOrTags)) {
+        $tags = get_current_record($recordOrTags)->Tags;
+    } else if ($recordOrTags instanceof Omeka_Record_AbstractRecord) {
+        $tags = $recordOrTags->Tags;
+    } else {
+        $tags = $recordOrTags;
+    }
+
+    if (empty($tags)) {
+        return '';
+    }
+
+    $tagStrings = array();
+    foreach ($tags as $tag) {
+        $name = $tag['name'];
+        if (!$link) {
+            $tagStrings[] = html_escape($name);
+        } else {
+            $tagStrings[] = '<a href="' . html_escape(url($link, array('tags' => strip_tags($name)))) . '" rel="tag">' . $name . '</a>';
+        }
+    }
+    return join(html_escape($delimiter), $tagStrings);
+  }
+	
+ /**
+ * truncateHtml can truncate a string up to a number of characters while preserving whole words and HTML tags
+ *
+ * @param string $text String to truncate.
+ * @param integer $length Length of returned string, including ellipsis.
+ * @param string $ending Ending to be appended to the trimmed string.
+ * @param boolean $exact If false, $text will not be cut mid-word
+ * @param boolean $considerHtml If true, HTML tags would be handled correctly
+ *
+ * @return string Trimmed string.
+ */	
+	public function truncateHtml($text, $length = 100, $ending = '...', $exact = false, $considerHtml = true) {
+  	if ($considerHtml) {
+  		// if the plain text is shorter than the maximum length, return the whole text
+  		if (strlen(preg_replace('/<.*?>/', '', $text)) <= $length) {
+  			return $text;
+  		}
+  		// splits all html-tags to scanable lines
+  		preg_match_all('/(<.+?>)?([^<>]*)/s', $text, $lines, PREG_SET_ORDER);
+  		$total_length = strlen($ending);
+  		$open_tags = array();
+  		$truncate = '';
+  		foreach ($lines as $line_matchings) {
+  			// if there is any html-tag in this line, handle it and add it (uncounted) to the output
+  			if (!empty($line_matchings[1])) {
+  				// if it's an "empty element" with or without xhtml-conform closing slash
+  				if (preg_match('/^<(\s*.+?\/\s*|\s*(img|br|input|hr|area|base|basefont|col|frame|isindex|link|meta|param)(\s.+?)?)>$/is', $line_matchings[1])) {
+  					// do nothing
+  				// if tag is a closing tag
+  				} else if (preg_match('/^<\s*\/([^\s]+?)\s*>$/s', $line_matchings[1], $tag_matchings)) {
+  					// delete tag from $open_tags list
+  					$pos = array_search($tag_matchings[1], $open_tags);
+  					if ($pos !== false) {
+  					unset($open_tags[$pos]);
+  					}
+  				// if tag is an opening tag
+  				} else if (preg_match('/^<\s*([^\s>!]+).*?>$/s', $line_matchings[1], $tag_matchings)) {
+  					// add tag to the beginning of $open_tags list
+  					array_unshift($open_tags, strtolower($tag_matchings[1]));
+  				}
+  				// add html-tag to $truncate'd text
+  				$truncate .= $line_matchings[1];
+  			}
+  			// calculate the length of the plain text part of the line; handle entities as one character
+  			$content_length = strlen(preg_replace('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', ' ', $line_matchings[2]));
+  			if ($total_length+$content_length> $length) {
+  				// the number of characters which are left
+  				$left = $length - $total_length;
+  				$entities_length = 0;
+  				// search for html entities
+  				if (preg_match_all('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', $line_matchings[2], $entities, PREG_OFFSET_CAPTURE)) {
+  					// calculate the real length of all entities in the legal range
+  					foreach ($entities[0] as $entity) {
+  						if ($entity[1]+1-$entities_length <= $left) {
+  							$left--;
+  							$entities_length += strlen($entity[0]);
+  						} else {
+  							// no more characters left
+  							break;
+  						}
+  					}
+  				}
+  				$truncate .= substr($line_matchings[2], 0, $left+$entities_length);
+  				// maximum lenght is reached, so get off the loop
+  				break;
+  			} else {
+  				$truncate .= $line_matchings[2];
+  				$total_length += $content_length;
+  			}
+  			// if the maximum length is reached, get off the loop
+  			if($total_length>= $length) {
+  				break;
+  			}
+  		}
+  	} else {
+  		if (strlen($text) <= $length) {
+  			return $text;
+  		} else {
+  			$truncate = substr($text, 0, $length - strlen($ending));
+  		}
+  	}
+  	// if the words shouldn't be cut in the middle...
+  	if (!$exact) {
+  		// ...search the last occurance of a space...
+  		$spacepos = strrpos($truncate, ' ');
+  		if (isset($spacepos)) {
+  			// ...and cut the text in this position
+  			$truncate = substr($truncate, 0, $spacepos);
+  		}
+  	}
+  	// add the defined ending to the text
+  	$truncate .= $ending;
+  	if($considerHtml) {
+  		// close all unclosed html-tags
+  		foreach ($open_tags as $tag) {
+  			$truncate .= '</' . $tag . '>';
+  		}
+  	}
+  	return $truncate;
+  }
+  public function t($string) {
+    if (plugin_is_active('Babel')) {
+      return BabelPlugin::translate($string);    
+    } else {
+      return $string;
+    }
+  }    
 }
+
+  

@@ -2,24 +2,38 @@
 class UiTemplates_PageController extends Omeka_Controller_AbstractActionController
 {
 
+  public function init() {
+    $this->languages = null;
+    if (plugin_is_active('Babel')) {
+      $this->languages = explode("#", get_option('languages_options'));
+      $this->view->lang = getLanguageForOmekaSwitch();      
+    }
+  }
+    
 	public function getForm($type = "Items")
 	{        
+  			$lang = get_html_lang();
         $form = new Zend_Form();
         $form->setName('UITemplates' . $type . 'Form');        
         // Retrieve list of item's metadata
         $db = get_db();
       	$elements = $db->query("SELECT id, name FROM `$db->Elements` WHERE id IN (SELECT DISTINCT element_id FROM `$db->ElementTexts`) ORDER BY name");
        	$elements = $elements->fetchAll();
+    		foreach ($elements as $i => $element) {
+      		$elements[$i]['name'] = __($elements[$i]['name']);
+        }       	
+        setlocale(LC_COLLATE, 'fr_FR.utf8');
+        usort($elements, function($a, $b) {return strcoll($a['name'], $b['name']); } );                   	
         $elements = array_column($elements, 'name', 'id');
         $elements['none'] = "None"; // Aucun champ
                 
         // Retrieve config for this type from DB
       	$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = '$type'")->fetchAll();
       	$config = array_pop($config);
-      	$config = unserialize(base64_decode($config['text']));        	
-
+      	$config = unserialize(base64_decode($config['text']));    
+//       	Zend_Debug::dump($config);   
        	// Available blocks for template
-       	$blocks = array('bloc1' => "Bloc 1", 'bloc2' => "Bloc 2", 'bloc3' => "Bloc 3", 'bloc4' => "Bloc 4", 'bloc5' => "Bloc 5");
+       	$blocks = array('bloc1' => "Bloc 1", 'bloc2' => "Bloc 2", 'bloc3' => "Bloc 3", 'bloc4' => "Bloc 4", 'bloc5' => "Bloc 5", 'bloc6' => "Bloc 6", 'bloc7' => "Bloc 7");
        	switch ($type) {
          	case 'Items' :
            	// Plugins
@@ -33,6 +47,7 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
            	if ($type == 'Collections') {
              	$blocks['plugin_children'] = "Sous Collections";
              	$blocks['plugin_items'] = "Notices";             	
+              plugin_is_active('CollectionRelations') ? $blocks['plugin_collection_relations'] = "Relations de la collection" : null; 
            	}
            	plugin_is_active('SocialBookmarking') ? $blocks['plugin_social'] = "Social Networks" : null; 
          	case 'Files' :
@@ -42,9 +57,10 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
            	if ($type == 'Files') {           	
              	$blocks['plugin_file'] = "Affichage du fichier";           	         	         	
              	$blocks['plugin_fileinfo'] = "Informations sur le fichier";           	         	         	         	         	         	
+              plugin_is_active('FileRelations') ? $blocks['plugin_file_relations'] = "Relations du fichier" : null; 
 //               plugin_is_active('Transcript') ? $blocks['plugin_transcript'] = "Transcription" : null;  
             }
-           break;
+            break;
        	}
        	foreach ($blocks as $id => $block) {
        			$blockSelects = array();
@@ -55,11 +71,26 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
        			$form->addElement($blockTitle);
        			       			
 	       		// Titre du block 
-       			$titleField = new Zend_Form_Element_Text('title_' . $id);
-       			$titleField->setLabel('Titre du bloc');
-       			$titleField->setValue($config[$id]['options']['title']);
-       			$titleField->setBelongsTo($id);
-       			$form->addElement($titleField);
+	       		if ($this->languages) {
+  	       		foreach ($this->languages as $i => $lang) {
+           			$titleField = new Zend_Form_Element_Text('title_' . $lang . '_' . $id);
+           			$titleField->setLabel('Titre du bloc : ' . $lang);  
+           			if (isset($config[$id]['options']['title'][$lang])) {
+             			$titleField->setValue($config[$id]['options']['title'][$lang]);             			
+           			} else {
+             			$titleField->setValue($config[$id]['options']['title']);             			             			
+           			}   			
+           			$titleField->setBelongsTo($id);
+           			$form->addElement($titleField);  	       		
+  	       		}
+  	       } else {
+         			$titleField = new Zend_Form_Element_Text('title_' . $id);
+         			$titleField->setLabel('Titre du bloc : ');       			
+         			$titleField->setValue($config[$id]['options']['title']);
+         			$titleField->setBelongsTo($id);
+         			$form->addElement($titleField);    	       
+  	       }
+       			
        			// Checkbox afficher titre oui/non
        			$titleDisplay = new Zend_Form_Element_Checkbox('display_' . $id);
        			$titleDisplay->setLabel('Afficher le titre ?');
@@ -97,7 +128,40 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 
        			$blockSelects[] = $blockOrder;
        			$blockSelects[] = $column;
-       			if ($id == 'plugin_relations' || substr($id, 0, 7) <> 'plugin_') {   			
+       			if (in_array($id, array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations'))) {
+         			switch ($id) {
+           			case 'plugin_relations' :
+           			 $ir_prefix = 'ir';
+           			break;
+           			case 'plugin_collection_relations' :
+           			 $ir_prefix = 'cr';
+           			break;
+           			case 'plugin_file_relations' :
+           			 $ir_prefix = 'fr';
+           			break;
+         			}
+       				$irIntitule = $ir_prefix . '_intitule_' . $id;
+       				$irIntitule = new Zend_Form_Element_Text($ir_prefix . '_intitule');
+       				if (isset($config[$id][$ir_prefix . '_intitule'])) {
+         				$irIntitule->setValue($config[$id][$ir_prefix . '_intitule']);         				
+       				} else {
+         				$irIntitule->setValue('Ce document');         				
+       				}
+       				$irIntitule->setBelongsTo($id);
+       				$irIntitule->setLabel("Intitulé sujet");       				 
+       				$form->addElement($irIntitule);               			
+       				$irIntituleObj = $ir_prefix . '_intitule_obj' . $id;
+       				$irIntituleObj = new Zend_Form_Element_Text($ir_prefix . '_intitule_obj');
+       				if (isset($config[$id][$ir_prefix . '_intitule_obj'])) {
+         				$irIntituleObj->setValue($config[$id][$ir_prefix . '_intitule_obj']);         				
+       				} else {
+         				$irIntituleObj->setValue('ce document');         				
+       				}
+       				$irIntituleObj->setBelongsTo($id);
+       				$irIntituleObj->setLabel("Intitulé objet");       				 
+       				$form->addElement($irIntituleObj);               			
+       			}       			
+       			if (in_array($id, array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations')) || substr($id, 0, 7) <> 'plugin_') {          				     						
 	       			// Fields
 	       			$nbFields = 7;
 	       			for ($i = 1; $i <= $nbFields ; $i++) {       				
@@ -115,17 +179,33 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 	       				$selectField->setBelongsTo($id);
 	       				$form->addElement($selectField);
 								
-	       				$titleName = 'name_' . $id . '_' . $i;
-	       				$fieldName = new Zend_Form_Element_Text($titleName);
-	       				$fieldName->setValue($config[$id][$titleName]);
-	       				$fieldName->setBelongsTo($id);
-	       				$fieldName->setLabel("Titre du champ : Champ " . $i);       				 
-	       				$form->addElement($fieldName);
+    	       		if ($this->languages) {
+      	       		foreach ($this->languages as $x => $lang) {
+//         	       		Zend_Debug::dump($config[$id]);
+    	       				$titleName = 'name_' . $id . '_' . $i . '_' . $lang;
+    	       				$fieldName = new Zend_Form_Element_Text($titleName);
+    	       				if (isset($config[$id][$titleName])) {
+      	       				$fieldName->setValue($config[$id][$titleName]);      	       				
+    	       				} else {
+      	       				$fieldName->setValue($config[$id]['name_' . $id . '_' . $i]);
+    	       				}
+    	       				$fieldName->setBelongsTo($id);
+    	       				$fieldName->setLabel("Titre du champ : Champ " . $i . " (" . $lang . ")");       				 
+    	       				$form->addElement($fieldName);  	       		
+      	       		}
+                } else {
+  	       				$titleName = 'name_' . $id . '_' . $i;
+  	       				$fieldName = new Zend_Form_Element_Text($titleName);
+  	       				$fieldName->setValue($config[$id][$titleName]);
+  	       				$fieldName->setBelongsTo($id);
+  	       				$fieldName->setLabel("Titre du champ : Champ " . $i);       				 
+  	       				$form->addElement($fieldName);                  
+                }								
 	       							
 	       				$blockSelects[] = $selectField;
 	       				$blockSelects[] = $fieldName;       				 
 	       			}       			
-       			} 		
+       			}       			 		
        	}       	
 
        	// Checkbox lien collection
@@ -149,10 +229,10 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 
 		return $this->prettifyForm($form);
 	}
-
-	
+		
 	public function indexAction()
 	{
+		$lang = get_html_lang();  	
 		$type = $this->getParam('type');
 		$this->view->content = "<h3>UI Templates $type admin page</h3>";
 		
@@ -168,6 +248,10 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
   		case 'file' :
 				$form = $this->getForm("Files");
 				$this->view->type = "Files";				
+				break;				
+  		case 'traduction' :
+				$form = $this->getTranslationsForm();
+				$this->view->type = "Traductions";				
 				break;				
 		}
 		if ($this->_request->isPost()) {
@@ -188,15 +272,21 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 				// Tri des blocs avant sauvegarde		
 				$blocs = $this->triBlocs($blocs);		
 				foreach($blocs as $bloc => $values) {
-				// Reorganize form values to fit config array format  				
-					$config[$bloc]['options']['title'] = $values['title_' . $bloc];
+				  // Reorganize form values to fit config array format  	
+				  if ($this->languages) {
+  				  foreach($this->languages as $x => $lang) {
+    					$config[$bloc]['options']['title'][$lang] = $values['title_' . $lang . '_' . $bloc];				      				  
+  				  }
+				  } else {
+  					$config[$bloc]['options']['title'] = $values['title_' . $bloc];  				  
+				  }
 					$config[$bloc]['options']['private'] = $values['private_' . $bloc];
 					$config[$bloc]['options']['display'] = $values['display_' . $bloc];
 					$config[$bloc]['options']['order'] = $values['order_' . $bloc];
 					$config[$bloc]['options']['column'] = $values['column_' . $bloc];					
 					// We get rid of the blockTitle, just used for admin display purposes
 					unset($config[$bloc]['blockTitle_' . $bloc]);
-					if ($values['title_' . $bloc]) {
+					if (isset($values['title_' . $bloc])) {
   					unset($values['title_' . $bloc], $values['display_' . $bloc], $values['order_' . $bloc], $values['column_' . $bloc]);  					
 					}
 					if (isset($values['blockTitle_' . $bloc])) {
@@ -209,7 +299,6 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 				// Sauvegarde form dans DB
 				$db = get_db();				
 				$config = base64_encode(serialize($config));
-
 				$db->query("DELETE FROM `$db->UiTemplates` WHERE template_type = '" . $this->view->type . "'");
 				$db->query("INSERT INTO `$db->UiTemplates` VALUES (null, '" . $this->view->type . "', '$config')");
 				$this->_helper->flashMessenger('UI Templates options saved for ' . $type . ' display.');
