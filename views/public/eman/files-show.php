@@ -1,8 +1,8 @@
 <?php
 queue_js_file('jquery.elevateZoom-3.0.8.min');
-echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'bodyclass' => 'files show')); ?>
+echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'bodyclass' => 'files show ' . $bodyColumns)); ?>
 
-<h1><?php 
+<h1><?php
   $title = "";
 		if(metadata('file', array('Dublin Core', 'Title'))) {
 				$titres = metadata('file', array('Dublin Core', 'Title'), array('all' => true));
@@ -10,7 +10,7 @@ echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'body
 					echo "<h1>$titre</h1>";
 				}
 		} else {
-				echo $title; 
+				echo $title;
 		}
   ?>
   <?php $itemId = metadata('file', 'item_id');
@@ -18,23 +18,23 @@ echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'body
     $itemTitle = metadata($item, array('Dublin Core', 'Title'));
   ?>
 </h1>
-<?php 
-  $auteurs = metadata('file', array('Dublin Core', 'Creator'), array('delimiter'=>' ; ')); 
+<?php
+  $auteurs = metadata('file', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '));
   if ($auteurs) {
-    strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');    
+    strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
   } else {
     $label = "";
   }
 ?>
 
 
-<?php 
+<?php
   $translations = unserialize(base64_decode(get_option('ui_templates_translations')));
 ?>
-		 
-		 
+
+
 <span class="dclabel" style="float:left;clear:left;"><?php echo $label;?> <!--  (DC.Creator) --> <?php echo $auteurs;?></span><br />
-<span style="float:left"><?php echo $this->controller->t('Notice') ?> : <a href="<?php echo WEB_ROOT;?>/items/show/<?php echo $itemId; ?>"><?php echo $itemTitle ?></a></span>		
+<span style="float:left"><?php echo $this->controller->t('Notice') ?> : <a href="<?php echo WEB_ROOT;?>/items/show/<?php echo $itemId; ?>"><?php echo $itemTitle ?></a></span>
 
 <?php echo get_specific_plugin_hook_output('Coins', 'public_files_show', array('view' => $this, 'file' => $file));?>
 
@@ -48,22 +48,8 @@ echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'body
   function zoom() {
   	jQuery('.zoomImage').elevateZoom({
     	zoomType: "inner",
-  		cursor:'zoom-in', 
-/*  		loadingIcon:'<?php echo WEB_ROOT . '/'; ?>/themes/eman/images/spinner.gif',
-  		tint:true,
-  		tintColour:'#000033',
-  		tintOpacity:.4,
-  		borderSize:2,
-      zoomWindowFadeIn: 250,
-      zoomWindowFadeOut: 250,	
-
-  		zoomWindowWidth:'1020',
-  		zoomWindowHeight:'120',	
-      zoomWindowPosition:'14',
-  		zoomWindowOffetx:-486,
-  		zoomWindowOffety:-65
-*/
-  	});    
+  		cursor:'zoom-in',
+  	});
   }
 jQuery(function ()  {
   zoom();
@@ -75,9 +61,9 @@ jQuery(function ()  {
 
 <style>
 #overlay {
- 	display:none; 
+ 	display:none;
 	width:99.9%;
- 	position:absolute; 
+ 	position:absolute;
 /* 	min-height:2000px; */
 	top:0;
 	left:0;
@@ -100,7 +86,7 @@ jQuery(function ()  {
 	margin-bottom:50px;
 }
 #left {
-	margin-left:5px;	
+	margin-left:5px;
 	clear:left;
 	float:left;
 }
@@ -127,18 +113,18 @@ $('#display-overlay').on('click', function() {
   	$('#plugin_transcript iframe').show();
     $('#primary').width('29%');
     $('#sidebar').width('69%');
-    zoom();  	
-  	$(this).text('MASQUER LA TRANSCRIPTION');    
-  	document.getElementById('transcription-full').contentWindow.location.reload(true);    
+    zoom();
+  	$(this).text('MASQUER LA TRANSCRIPTION');
+  	document.getElementById('transcription-full').contentWindow.location.reload(true);
   } else {
     $('#primary').width('49%');
     $('#sidebar').width('49%');
-  	$(this).text('AFFICHER LA TRANSCRIPTION');    
+  	$(this).text('AFFICHER LA TRANSCRIPTION');
   	$('#plugin_transcript iframe').hide();
     zoom();
     }
 });
-</script> 
+</script>
 <?php
  // Previous / Next file Pager complet ?
   $fichier = get_current_record('file');
@@ -147,7 +133,7 @@ $('#display-overlay').on('click', function() {
   $files = get_records('File', array('item' => $fichier->item_id, 'sort_field' => 'order', 'sort_dir' => 'asc'), 100);
 
   $nbFiles = count($files);
-  if ($nbFiles > $maxFiles) { 
+  if ($nbFiles > $maxFiles) {
 	  // Seach index of current file in all files
 	  $i = 0;
 	  foreach($files as $struct) {
@@ -164,7 +150,7 @@ $('#display-overlay').on('click', function() {
   }
 
   set_loop_records('files', $files);
-  
+
   $pager = array();
   $i = $current = 0;
   $prec = $suiv = "";
@@ -175,11 +161,11 @@ $('#display-overlay').on('click', function() {
     	$current = $i;
     	if ($i > 0) {
 				$prec = link_to_file_show(array('class' => $classes), '<span style="font-size:32px;">&loarr;</span> ', $files[$i-1]);
-    	}    	
+    	}
     	if ($i < count($files) - 1) {
 				$suiv = link_to_file_show(array('class' => $classes), ' <span style="font-size:32px;">&roarr;</span>', $files[$i+1]);
-    	}    	
-    }    
+    	}
+    }
     $pager[] = link_to_file_show(array('class' => $classes), metadata($f, array('Dublin Core', 'Title')), $f);
   	$i++;
   }
@@ -194,7 +180,7 @@ $('#display-overlay').on('click', function() {
   font-weight: bold;
   clear:both;
   display:block;
-  float:right;  
+  float:right;
 }
 .field-uitemplates {
   overflow: auto;
@@ -203,7 +189,7 @@ $('#display-overlay').on('click', function() {
 
 <script>
  $ = jQuery;
- 
+
 $(document).ready(function(){
   $('.suite').click(function() {
     $(this).parent().parent().find('.fieldcontentcomplet').show();
@@ -220,6 +206,6 @@ function resizeIframe(obj) {
 }
 </script>
 
-<?php  
+<?php
   echo $pager;
   echo foot(); ?>

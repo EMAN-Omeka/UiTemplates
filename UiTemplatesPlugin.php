@@ -1,24 +1,25 @@
 <?php
 
-/* 
+/*
  * E-man Plugin
  *
  * Functions to customize Omeka for the E-man Project
  *
  */
 
-class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin 
+class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 {
 
   protected $_hooks = array(
   		'define_acl',
   		'install',
-  		'define_routes',  		
+  		'uninstall',
+  		'define_routes',
   );
-  
+
   protected $_filters = array(
   	'admin_navigation_main',
-  );    
+  );
   function hookDefineRoutes($args)
   {
 
@@ -37,15 +38,15 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   						)
   				)
   		);
- 		
+
   		if (! is_admin_theme()) {
 	  		// If template is used, override Omeka items/show display
-	  		$ui_template = get_option('use_ui_items_template'); 		
+	  		$ui_template = get_option('use_ui_items_template');
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_item',
 		  				new Zend_Controller_Router_Route(
-		  						'items/show/:id', 
+		  						'items/show/:id',
 		  						array(
 		  								'module' => 'ui-templates',
 		  								'controller'   => 'eman',
@@ -69,15 +70,15 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 			   						)
 			   				)
 			   		);
-		   		}		   		
+		   		}
 	  		}
 	   		// If template is used, override Omeka  collections/show display
-	  		$ui_template = get_option('use_ui_collections_template');  		
+	  		$ui_template = get_option('use_ui_collections_template');
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_collection',
 		  				new Zend_Controller_Router_Route(
-		  						'collections/show/:id', 
+		  						'collections/show/:id',
 		  						array(
 		  								'module' => 'ui-templates',
 		  								'controller'   => 'eman',
@@ -88,12 +89,12 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 		  		);
 	  		}
 	     	// If template is used, override Omeka collections/show display
-	  		$ui_template = get_option('use_ui_files_template');  		
+	  		$ui_template = get_option('use_ui_files_template');
 	  		if ($ui_template && ! isset($_GET['output'])) {
 		   		$router->addRoute(
 		  				'uitemplates_show_file',
 		  				new Zend_Controller_Router_Route(
-		  						'files/show/:id', 
+		  						'files/show/:id',
 		  						array(
 		  								'module' => 'ui-templates',
 		  								'controller'   => 'eman',
@@ -112,7 +113,7 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   	$uiTemplatesAdmin = new Zend_Acl_Resource('UiTemplates_Page');
   	$acl->add($uiTemplatesAdmin);
   }
-  
+
   /**
    * Add the pages to the public main navigation options.
    *
@@ -124,11 +125,11 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
     $nav[] = array(
                     'label' => __('UI Templates'),
                     'uri' => url('uitemplate/item'),
-    								'resource' => 'UiTemplates_Page',		
+    								'resource' => 'UiTemplates_Page',
                   );
     return $nav;
   }
-    
+
   /**
    * Install the plugin.
    */
@@ -142,13 +143,33 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 	  PRIMARY KEY (`id`)
 	  ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 	  $db->query($sql);
-	  
+
 	  $this->_installOptions();
-  }  
-  
+  }
+
+  /**
+   * Install the plugin.
+   */
+  public function hookUnInstall()
+  {
+	  $db = $this->_db;
+	  $db->query("DROP TABLE `$db->UiTemplates`");
+    delete_option('use_ui_collections_template');
+    delete_option('use_ui_files_template');
+    delete_option('use_ui_items_template');
+    delete_option('uit_maxLength');
+    delete_option('uit_nbBlocks');
+    delete_option('uit_nbFields');
+    delete_option('ir_intitule');
+    delete_option('ir_intitule_obj');
+    delete_option('cr_intitule');
+    delete_option('cr_intitule_obj');
+    delete_option('fr_intitule');
+    delete_option('fr_intitule_obj');
+  }
+
   static function displayObjectDC($object, $dc, $title, $itemset = 'Dublin Core') {
  		$metas = metadata($object, array($itemset, $dc), array('all' => true, 'no_filter' => true));
-//  		Zend_Debug::dump($metas);  		
  		foreach ($metas as $i => $meta) {
  			if (strlen($meta) > 150) {
  				$metas[$i] = "<div style='text-align:justify;'>$meta</div>";
@@ -160,6 +181,6 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 		} else {
 			$metas = "<strong>$title</strong><!-- (DC.$dc) -->" . $metas[0] . "<br />";
 		}
-  	return $metas;  	  	
+  	return $metas;
   }
 }
