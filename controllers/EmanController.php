@@ -35,8 +35,8 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
       			$this->view->collection_link = '<div style="background: transparent; border:none;box-shadow:none;margin:0;padding:0;"><span class="dclabel">' . $this->t('Collection') . ' : </span>' . link_to_collection_for_item();
       			$collection = get_collection_for_item();
       			if ($collection) {
-        			$link_to_collection_items = WEB_ROOT . '/items/browse?collection=' . $collection->id;
-        			if ($collection->id) {
+        			if ($collection->id && count(get_records('Item', array('collection_id' => $collection->id), 10)) > 1) {
+          			$link_to_collection_items = WEB_ROOT . '/items/browse?collection=' . $collection->id;
           			$this->view->collection_link .= "&nbsp;-&nbsp;<a href='$link_to_collection_items'>" . $this->t('Voir les autres notices de cette collection') . "</a>";
         			}
         		}
@@ -46,7 +46,8 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
       		}
     			continue;
   			}
-  			if (in_array($block, array('author_name', 'author_size', 'title_size'))) {
+  			$t = strtolower($type) . 's';
+  			if (in_array($block, array('author_name_' . $t, 'author_size_' . $t, 'title_size_' . $t))) {
     			$this->view->$block = $fields;
     			continue;
         }
@@ -139,14 +140,6 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
               $fieldContent = array();
     					foreach($fieldData as $i => $fieldInstance ) {
     						if ($fieldInstance) {
-    							// Field contains exactly an URL : link in a new window
-    							if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
-    								$fieldInstance = "<span class='uit-field'><a target='_blank' href='$fieldInstance'>$fieldInstance</a></span>";
-    							}
-    							// Type field : create a link to items/browse
-    							if ($elements[$dataId]['name'] == 'Type') {
-    								$fieldInstance = "<span class='uit-field'><a href='" . WEB_ROOT . "/items/browse?type=" . urlencode($fieldInstance) . "'>$fieldInstance</a></span>";
-    							}
         					if (strlen($fieldInstance < 200 && $config[$block]['link_' . $fieldName])) {
           					$fieldInstance = "<span class='uit-field'><a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>,&nbsp;</span>";
         					}
@@ -164,8 +157,8 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
                  if ($config[$block]['pres_' . $fieldName] == 'liste') {
                    $fieldContent = "<ul class='uit-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
                  } else {
-                    $fieldContent = "<span class='uit-field'>" . implode("", $fieldContent) . "</span>";
-                    if (strrpos($fieldContent, ',') <> 0 && strrpos($fieldContent, 'uit-field')) {
+                    $fieldContent = "<span class='uit-field'>" . implode(", ", $fieldContent) . "</span>";
+                    if (strrpos($fieldContent, ',') == strlen($fieldContent) && strrpos($fieldContent, 'uit-field')) {
                      $fieldContent = substr_replace($fieldContent, '', strrpos($fieldContent, ','), 1);
                     }
                  }
@@ -181,7 +174,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
     					if ($fieldContent) {
                 $nbFields++;
       					$maxLength = get_option('uit_maxLength');
-      					$maxLength ? null : $maxLength = 500;
+                $maxLength ? null : $maxLength = 500;
       					// If generating PDF or text too short, display as it is ...
       					if (isset($_GET['context']) && $_GET['context'] == 'pdf' || strlen($fieldContent) < $maxLength || $config[$block]['more_' . $fieldName] != 1) {
       						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'><div class='uit-field-wrapper'><span class='field-uitemplates-title'>$fieldTitle</span> $fieldContent</div></div>";
@@ -199,17 +192,20 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				}
   			}
   			if ($blockContent) {
-  				if ($config[$block]['options']['display'] && ! ($options['field_as_title'] == 1 && $nbFields == 1)) {
-            if ($this->lang) {
-              $config[$block]['options']['title'][$this->lang] <> "" ? $blockTitle = $config[$block]['options']['title'][$this->lang] : $blockTitle = $config[$block]['options']['title'][$this->default_language];
+  				if ($config[$block]['options']['display']) {
+    				if (! ($options['field_as_title'] == 1 && $nbFields == 1)) {
+              if ($this->lang) {
+                $config[$block]['options']['title'][$this->lang] <> "" ? $blockTitle = $config[$block]['options']['title'][$this->lang] : $blockTitle = $config[$block]['options']['title'][$this->default_language];
+              } else {
+                $blockTitle = $config[$block]['options']['title'];
+              }
             } else {
-              $blockTitle = $config[$block]['options']['title'];
-            }
+          		$blockContent = str_replace("class='field-uitemplates-title'", "class='field-uitemplates-title hidden'", $blockContent);
+      		  }
       		} else {
-        		$blockContent = str_replace("class='field-uitemplates-title'", "class='field-uitemplates-title hidden'", $blockContent);
+        		$blockTitle = '';
       		}
   				isset($blockTitle) ? $blockTitle = "<h2>" . $blockTitle . "</h2>" : $blockTitle = '';
-
   				// Affichage du bloc ?
   				if (! isset($config[$block]['options']['mask_it'])) : $config[$block]['options']['mask_it'] = 0; endif;
           if (($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) && $entity->collection_id <> $config[$block]['options']['mask_col'] && $entity->item_type_id <> $config[$block]['options']['mask_it'] || $type <> 'Item') {

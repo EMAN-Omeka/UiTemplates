@@ -1,7 +1,6 @@
 <?php
 class UiTemplates_PageController extends Omeka_Controller_AbstractActionController
 {
-
   public function init() {
     $this->languages = null;
     if (plugin_is_active('Babel')) {
@@ -10,7 +9,7 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
     }
   }
 
-public function getOptionsForm($type = "Items")
+public function getBrowseForm($type = "Items")
 	{
     $db = get_db();
     // Retrieve config for this type from DB
@@ -379,26 +378,26 @@ public function getOptionsForm($type = "Items")
      	$collection_link->setLabel('Afficher le lien collection ?');
      	$collection_link->setValue($config['collection_link']);
      	$form->addElement($collection_link);
-
-     	$titleSize = new Zend_Form_Element_Select('title_size');
-				$titleSize->setMultiOptions(array('16px' => '16px', '20px' => '20px', '24px' => '24px'));
-				isset($config['title_size']) ? $titleSize->setValue($config['title_size']) : $titleSize->setValue('16px');
-				$titleSize->setLabel("Taille du champ Titre(s) :");
-				$form->addElement($titleSize);
-
-     	$authorName = new Zend_Form_Element_Text('author_name');
-				isset($config['author_name']) ? $authorName->setValue($config['author_name']) : $authorName->setValue('Auteurs');
-				$authorName->setLabel("Titre du champ Auteur(s) :");
-				$form->addElement($authorName);
-     	$authorSize = new Zend_Form_Element_Select('author_size');
-				$authorSize->setMultiOptions(array('16px' => '16px', '20px' => '20px', '24px' => '24px'));
-				isset($config['author_size']) ? $authorSize->setValue($config['author_size']) : $authorSize->setValue('16px');
-				$authorSize->setLabel("Taile du champ Auteur(s) :");
-				$form->addElement($authorSize);
     }
+   	$t = strtolower($type);
+   	$titleSize = new Zend_Form_Element_Select('title_size_' . $t);
+		$titleSize->setMultiOptions(array('16px' => '16px', '20px' => '20px', '24px' => '24px'));
+		isset($config['title_size_' . $t]) ? $titleSize->setValue($config['title_size_' . $t]) : $titleSize->setValue('16px');
+		$titleSize->setLabel("Taille du champ Titre(s) :");
+		$form->addElement($titleSize);
+
+   	$authorName = new Zend_Form_Element_Text('author_name_' . $t);
+		isset($config['author_name_' . $t]) ? $authorName->setValue($config['author_name_' . $t]) : $authorName->setValue('Auteurs');
+		$authorName->setLabel("Titre du champ Auteur(s) :");
+		$form->addElement($authorName);
+
+   	$authorSize = new Zend_Form_Element_Select('author_size_' . $t);
+		$authorSize->setMultiOptions(array('16px' => '16px', '20px' => '20px', '24px' => '24px'));
+		isset($config['author_size_' . $t]) ? $authorSize->setValue($config['author_size_' . $t]) : $authorSize->setValue('16px');
+		$authorSize->setLabel("Taille du champ Auteur(s) :");
+		$form->addElement($authorSize);
 
    	// Checkbox utiliser le template oui/non
-   	$t = strtolower($type);
    	$use_ui_templates = new Zend_Form_Element_Checkbox('use_ui_' . $t . '_template');
    	$use_ui_templates->setLabel("Remplacer $t/show ?");
    	$use_ui_templates->setValue(get_option('use_ui_' . $t . '_template'));
@@ -431,8 +430,8 @@ public function getOptionsForm($type = "Items")
 				$this->view->type = "Files";
 				break;
   		case 'options' :
-				$form = $this->getOptionsForm();
-				$this->view->type = "Options";
+				$form = $this->getBrowseForm();
+				$this->view->type = "Options Générales";
 				break;
 		}
 		if ($this->_request->isPost()) {
@@ -455,15 +454,16 @@ public function getOptionsForm($type = "Items")
 				$config = array();
 				if ($type == 'item') {
 					$config['collection_link'] = $blocs['collection_link'];
-					$config['author_name'] = $blocs['author_name'];
-					$config['author_size'] = $blocs['author_size'];
-					$config['title_size'] = $blocs['title_size'];
-
-					unset($blocs['collection_link']);
-					unset($blocs['author_name']);
-					unset($blocs['author_size']);
-					unset($blocs['title_size']);
 				}
+				$t = $type . 's';
+				$config['author_name_' . $t] = $blocs['author_name_' . $t];
+				$config['author_size_' . $t] = $blocs['author_size_' . $t];
+				$config['title_size_' . $t] = $blocs['title_size_' . $t];
+
+				unset($blocs['collection_link']);
+				unset($blocs['author_name_' . $t]);
+				unset($blocs['author_size_' . $t]);
+				unset($blocs['title_size_' . $t]);
 				// Tri des blocs avant sauvegarde
 				$blocs = $this->triBlocs($blocs);
 				foreach($blocs as $bloc => $values) {

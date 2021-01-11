@@ -2,29 +2,30 @@
 queue_js_file('jquery.elevateZoom-3.0.8.min');
 echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'bodyclass' => 'files show ' . $bodyColumns)); ?>
 
-<h1><?php
+<?php
   $title = "";
 		if(metadata('file', array('Dublin Core', 'Title'))) {
 				$titres = metadata('file', array('Dublin Core', 'Title'), array('all' => true));
 				foreach ($titres as $i => $titre) {
-					echo "<h1>$titre</h1>";
+          echo "<span id='doc-title' style='font-size:$title_size_files; clear:both;display:block;'>$titre</span>";
 				}
 		} else {
-				echo $title;
+  		echo "<span id='doc-title' style='font-size:$title_size_files; clear:both;display:block;'>$titre</span>";
 		}
   ?>
   <?php $itemId = metadata('file', 'item_id');
     $item = get_record_by_id('item', $itemId);
     $itemTitle = metadata($item, array('Dublin Core', 'Title'));
   ?>
-</h1>
 <?php
   $auteurs = metadata('file', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '));
+/*
   if ($auteurs) {
     strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
   } else {
-    $label = "";
-  }
+*/
+   $label = $this->controller->t($author_name_files);
+//   }
 ?>
 
 
@@ -33,7 +34,7 @@ echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'body
 ?>
 
 
-<span class="dclabel" style="float:left;clear:left;"><?php echo $label;?> <!--  (DC.Creator) --> <?php echo $auteurs;?></span><br />
+<span class='dclabel' style='float:left;clear:left;font-size:<?php echo $author_size_collections ?>;'><?php echo $label;?> : <!--  (DC.Creator) --> <?php echo $auteurs;?></span><br />
 <span style="float:left"><?php echo $this->controller->t('Notice') ?> : <a href="<?php echo WEB_ROOT;?>/items/show/<?php echo $itemId; ?>"><?php echo $itemTitle ?></a></span>
 
 <?php echo get_specific_plugin_hook_output('Coins', 'public_files_show', array('view' => $this, 'file' => $file));?>

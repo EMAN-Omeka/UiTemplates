@@ -16,10 +16,10 @@ echo head(array('title' => metadata('collection', array('Dublin Core', 'Title'))
 		if(metadata('collection', array('Dublin Core', 'Title'))) {
 				$titres = metadata('collection', array('Dublin Core', 'Title'), array('all' => true));
 				foreach ($titres as $i => $titre) {
-					echo "<h1>$titre</h1>";
+          echo "<span id='doc-title' style='font-size:$title_size_collections;clear:both;display:block;'>$titre</span>";
 				}
 		} else {
-				echo $title;
+    		echo "<span id='doc-title' style='font-size:$title_size_collections;clear:both;display:block;'>$titre</span>";
 		}?>
 </h1>
 <?php
@@ -36,9 +36,10 @@ echo head(array('title' => metadata('collection', array('Dublin Core', 'Title'))
 ?>
 <?php
   $auteurs = metadata('collection', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '));
-  strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
+//   strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
+  $label = $this->controller->t($author_name_collections);
   if ($auteurs) { ?>
-    <span  class="dclabel"><?php echo $label; ?><!--  (DC.Creator) --> : <?php echo $auteurs;?></span><br />
+    <span class='dclabel' style='font-size:<?php echo $author_size_collections ?>;'><?php echo $label; ?><!--  (DC.Creator) --> : <?php echo $auteurs;?></span><br />
   <?php } ?>
 <span class="uit-link">
   <?php if ($childCollection) { ?>
