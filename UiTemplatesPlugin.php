@@ -15,11 +15,18 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   		'install',
   		'uninstall',
   		'define_routes',
+  		'public_head',
   );
 
   protected $_filters = array(
   	'admin_navigation_main',
   );
+
+  function hookPublicHead()
+  {
+    queue_css_file('ui-templates');
+  }
+
   function hookDefineRoutes($args)
   {
 
@@ -147,8 +154,9 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 	  $this->_installOptions();
   }
 
+
   /**
-   * Install the plugin.
+   * Uninstall the plugin.
    */
   public function hookUnInstall()
   {

@@ -13,9 +13,7 @@
   echo get_specific_plugin_hook_output('Coins', 'public_items_show', array('view' => $this, 'item' => $item));
 ?>
 
-<?php if (metadata('item', array('Dublin Core', 'Creator'))) : ?>
-<?php
-  $auteurs = metadata('item', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '));
+<?php if ($auteurs = metadata('item', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '))) :
   strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
   $label = $this->controller->t($author_name_items);
 ?>
@@ -24,14 +22,6 @@
 
 <?php echo $collection_link; ?>
 
-<?php
-/*
-  echo get_specific_plugin_hook_output('UniversalViewer', 'public_items_show', array(
-        'record' => $item,
-        'view' => $this,
-    ));
-*/
-?>
 <?php echo $content; ?>
 <span  class="dclabel" style='float:right;clear:right;'><?php echo str_replace('Notice créée par', $this->controller->t('Notice créée par'), get_specific_plugin_hook_output('Bookmarks', 'public_items_show', array('view' => $this, 'item' => $item))); ?></span>
 <span  class="dclabel" style='float:right;clear:right;'><?php echo $this->controller->t('Notice créée le') . ' ' . date('d/m/Y', strtotime(metadata('item', 'added'))); ?> </span>
@@ -100,60 +90,6 @@
   </ul>
 <?php } ?>
 <div id='transcripted' style='display:none;'><?php echo $markTranscripted ?></div>
-<style>
-.suite, .replier {
-  cursor: pointer;
-  font-style:italic;
-  font-weight: bold;
-  clear:both;
-  display:block;
-  float:right;
-}
-.field-uitemplates-title {
-  float:left;
-  clear:left;
-  display: block;
-}
-.uit-field, .fieldcontentshort, .fieldcontentcomplet {
-  margin-bottom: 1em;
-  display:block;
-  float:left;
-  clear:right;
-  padding-left: 2px;
-}
-li .uit-field {
-  padding: 0;
-  margin: 0;
-}
-.uit-field-wrapper {
-  display:block;
-  overflow: auto;
-}
-.uit-list,
-.uit-list li,
-.uit-field-wrapper {
-  clear:both;
-}
-
-.field-uitemplates {
-  clear:both;
-  display: block;
-  overflow: auto;
-}
-
-.field-uitemplates-title::after {
-  content:' : ';
-  padding-right: 3px;
-}
-.block-uitemplates {
-  overflow:visible;
-}
-
-.transcripted img {
-  border: 1px solid #ac2f2f;
-  border-radius: 5px;
-}
-</style>
 
  <script>
  $ = jQuery;

@@ -115,6 +115,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
         $nbFields = 0;
   			foreach ($fields as $fieldName => $dataId) {
   				$fieldContent = $fieldTitle = '';
+
   				if (is_numeric($dataId) && $dataId <> 0) {
     				if ($this->lang) {
       				if (isset($fields['name_' . $fieldName . '_' . $this->lang])) {
@@ -136,32 +137,35 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				  // Exception pour blocs Relations
   				  //TODO : revoir ce test
   				  if (substr($fieldName, 0, 4) == 'bloc' || in_array(substr($fieldName, 0, 16), array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations', 'plugin_tags')) || in_array(substr($fieldName, 0, 11), array('plugin_tags'))) {
+      				$config[$block]['bold_' . $fieldName] ? $bold = 'bold' : $bold = '';
+      				$config[$block]['retour_' . $fieldName] ? $retour = 'retour' : $retour = '';
+
     					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));
               $fieldContent = array();
     					foreach($fieldData as $i => $fieldInstance ) {
     						if ($fieldInstance) {
         					if (strlen($fieldInstance < 200 && $config[$block]['link_' . $fieldName])) {
-          					$fieldInstance = "<span class='uit-field'><a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>,&nbsp;</span>";
+          					$fieldInstance = "<span class='uit-field $retour'><a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>,&nbsp;</span>";
         					}
     							$fieldContent[] = $fieldInstance;
     						}
     					}
     					// If field contains something, display it
               if (count($fieldContent) > 1) {
-                 setlocale(LC_COLLATE, 'fr_FR.UTF-8');
-                  if ($config[$block]['ordre_' . $fieldName] == 'asc') {
-                    usort($fieldContent, function($a, $b) {return strcoll($a, $b);});
-                  } else {
-                    usort($fieldContent, function($a, $b) {return strcoll($b, $a);});
+                setlocale(LC_COLLATE, 'fr_FR.UTF-8');
+                if ($config[$block]['ordre_' . $fieldName] == 'asc') {
+                  usort($fieldContent, function($a, $b) {return strcoll($a, $b);});
+                } else {
+                  usort($fieldContent, function($a, $b) {return strcoll($b, $a);});
+                }
+                if ($config[$block]['pres_' . $fieldName] == 'liste') {
+                  $fieldContent = "<ul class='uit-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
+                } else {
+                  $fieldContent = "<span class='uit-field $retour'>" . implode(", ", $fieldContent) . "</span>";
+                  if (strrpos($fieldContent, ',') == strlen($fieldContent) && strrpos($fieldContent, 'uit-field')) {
+                   $fieldContent = substr_replace($fieldContent, '', strrpos($fieldContent, ','), 1);
                   }
-                 if ($config[$block]['pres_' . $fieldName] == 'liste') {
-                   $fieldContent = "<ul class='uit-list'><li>" . implode("</li><li>", $fieldContent) . "</li></ul>";
-                 } else {
-                    $fieldContent = "<span class='uit-field'>" . implode(", ", $fieldContent) . "</span>";
-                    if (strrpos($fieldContent, ',') == strlen($fieldContent) && strrpos($fieldContent, 'uit-field')) {
-                     $fieldContent = substr_replace($fieldContent, '', strrpos($fieldContent, ','), 1);
-                    }
-                 }
+                }
               } elseif ($fieldContent) {
                 if (strrpos($fieldContent[0], ',') <> 0 && strrpos($fieldContent[0], 'uit-field')) {
                  $fieldContent = substr_replace($fieldContent[0], '', strrpos($fieldContent[0], ','), 1);
@@ -177,15 +181,15 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
                 $maxLength ? null : $maxLength = 500;
       					// If generating PDF or text too short, display as it is ...
       					if (isset($_GET['context']) && $_GET['context'] == 'pdf' || strlen($fieldContent) < $maxLength || $config[$block]['more_' . $fieldName] != 1) {
-      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'><div class='uit-field-wrapper'><span class='field-uitemplates-title'>$fieldTitle</span> $fieldContent</div></div>";
+      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'><div class='uit-field-wrapper'><span class='field-uitemplates-title $bold'>$fieldTitle</span><span class='uit-field $retour'>$fieldContent</span></div></div>";
       					} else {
         					// ... else hide text above $maxlength
                   $fieldContentShort = $this->truncateHtml($fieldContent, $maxLength, ' ...', false, true);
                   $fieldContentShort = tidy_repair_string($fieldContentShort, array('show-body-only' => true));
                   $fieldContentShort .= "<span class='suite'> ... ". $this->t('Lire la suite') . "</span>";
                   $fieldContentComplet = $fieldContent . '<span class="replier"><br />' . $this->t('Retour à la version réduite') . '</span></span>';
-      	  				$fieldTitle = "<span class='field-uitemplates-title' style='font-weight:bold;'>$fieldTitle</span> : ";
-      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle<div class='fieldcontentshort'>$fieldContentShort</div><div class='fieldcontentcomplet' style='display:none;'>$fieldContentComplet</div></div>";
+      	  				$fieldTitle = "<span class='field-uitemplates-title $bold'>$fieldTitle</span> : ";
+      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle<div class='uit-field-wrapper'><span class='uit-field $retour'><div class='fieldcontentshort'>$fieldContentShort</div><div class='fieldcontentcomplet' style='display:none;'>$fieldContentComplet</div></span></div></div>";
                 }
     					}
     				}
@@ -208,7 +212,8 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				isset($blockTitle) ? $blockTitle = "<h2>" . $blockTitle . "</h2>" : $blockTitle = '';
   				// Affichage du bloc ?
   				if (! isset($config[$block]['options']['mask_it'])) : $config[$block]['options']['mask_it'] = 0; endif;
-          if (($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) && $entity->collection_id <> $config[$block]['options']['mask_col'] && $entity->item_type_id <> $config[$block]['options']['mask_it'] || $type <> 'Item') {
+          if (($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) && ! in_array($entity->collection_id, (array) $config[$block]['options']['mask_col']) && ! in_array($entity->item_type_id, (array) $config[$block]['options']['mask_it']) || $type <> 'Item') {
+
    				  $content[$block] = "<div class='field-uitemplates field-uitemplates-$block block-uitemplates' id='$block'>$blockTitle $blockContent</div>";
   				}
   			}
@@ -275,30 +280,37 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 
 	public function displayFiles($item) {
 		$fileGallery = "";
-		if (metadata('item', 'has files')) {	/*
+		if (metadata('item', 'has files')) {
+			ob_start(); // We need to capture the UniversalViwer plugin ouput
+  	  echo get_specific_plugin_hook_output('UniversalViewer', 'public_items_show', array(
+        'record' => $item,
+        'view' => $this->view,
+      ));
+/*
 			Affichage du visualiseur en fonction dy type de fichier
 			jpg -> Bookreader
 			Pdf -> DocViewer
-			Autre -> Affichage classique */
-			ob_start(); // We need to capture the BookReader plugin ouput
+			Autre -> Affichage classique
+
 			set_loop_records('files', $item->Files);
 			foreach (loop('files') as $file):
-			if (in_array($file->getExtension(), array('jpg', 'JPG', 'jpeg', 'JPEG'))) {
-				fire_plugin_hook('book_reader_item_show', array(
-  				'view' => $this,
-  				'item' => $item,
-  				'page' => '0',
-  				'embed_functions' => false,
-  				'mode_page' => 1,
-				));
-				break;
-			} elseif ($file->getExtension() =='pdf') {
-				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'. metadata($file,'filename').'"></iframe>';	break;
-			} else {
-				echo files_for_item();
-				break;
-			}
+  			if (in_array($file->getExtension(), array('jpg', 'JPG', 'jpeg', 'JPEG'))) {
+  				fire_plugin_hook('book_reader_item_show', array(
+    				'view' => $this,
+    				'item' => $item,
+    				'page' => '0',
+    				'embed_functions' => false,
+    				'mode_page' => 1,
+  				));
+  				break;
+  			} elseif ($file->getExtension() =='pdf') {
+  				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'. metadata($file,'filename').'"></iframe>';	break;
+  			} else {
+  				echo files_for_item();
+  				break;
+  			}
 			endforeach;
+*/
 		}
 		$fileGallery = ob_get_contents();
 		ob_end_clean();
@@ -318,7 +330,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
       $entity_type = 'file';
   	}
   	// Désactivé cause erreur "String could not be parsed as XML"
-		$socialPlugins = get_specific_plugin_hook_output('SocialBookmarking', $hook, array('view' => $this, $entity_type => $entity));
+		$socialPlugins = get_specific_plugin_hook_output('SocialBookmarking', $hook, array('view' => $this->view, $entity_type => $entity));
 		return $socialPlugins;
 	}
 
@@ -347,7 +359,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 	}
 
 	public function displayRelations($item) {
-		$relations = get_specific_plugin_hook_output('ItemRelations', 'public_items_show', array('view' => $this, 'item' => $item));
+		$relations = get_specific_plugin_hook_output('ItemRelations', 'public_items_show', array('view' => $this->view, 'item' => $item));
 		if (strstr($relations, 'Ce document n\'a pas de relation indiquée avec un autre document du projet.')) {
   		$relations = str_replace('Ce document n\'a pas de relation indiquée avec un autre document du projet.', $this->t('Ce document n\'a pas de relation indiquée avec un autre document du projet.'), $relations);
 		} elseif (plugin_is_active('Graph'))   {
@@ -358,7 +370,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 	}
 
 	public function displayCollectionRelations($collection) {
-		$relations = get_specific_plugin_hook_output('CollectionRelations', 'public_collections_show', array('view' => $this, 'collection' => $collection));
+		$relations = get_specific_plugin_hook_output('CollectionRelations', 'public_collections_show', array('view' => $this->view, 'collection' => $collection));
 		if (strstr($relations, 'Ce document n\'a pas de relation indiquée avec un autre document du projet.')) {
   		$relations = str_replace('Ce document n\'a pas de relation indiquée avec un autre document du projet.', $this->t('Ce document n\'a pas de relation indiquée avec un autre document du projet.'), $relations);
 		} elseif (plugin_is_active('Graph'))   {
@@ -369,7 +381,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 	}
 
 	public function displayFileRelations($file) {
-		$relations = get_specific_plugin_hook_output('FileRelations', 'public_files_show', array('view' => $this, 'file' => $file));
+		$relations = get_specific_plugin_hook_output('FileRelations', 'public_files_show', array('view' => $this->view, 'file' => $file));
 		if (strstr($relations, 'Ce document n\'a pas de relation indiquée avec un autre document du projet.')) {
   		$relations = str_replace('Ce document n\'a pas de relation indiquée avec un autre document du projet.', $this->t('Ce document n\'a pas de relation indiquée avec un autre document du projet.'), $relations);
 		} elseif (plugin_is_active('Graph'))   {

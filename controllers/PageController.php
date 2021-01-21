@@ -71,6 +71,14 @@ public function getBrowseForm($type = "Items")
   		$collection = get_record_by_id('collection', $data['id']);
   		$collections[$data['id']] = substr(metadata($collection, array('Dublin Core', 'Title')), 0, 50);
     }
+    setlocale(LC_COLLATE, 'fr_FR.UTF-8');
+		$c = new Collator('fr_FR');
+		$c->setAttribute(Collator::NUMERIC_COLLATION, Collator::ON);
+		$c->setAttribute(Collator::FRENCH_COLLATION, Collator::ON);
+    uasort($collections, function($a, $b) use ($c) {
+  		$x = $c->compare($a, $b);
+  		return ($x);
+    });
   	$itemTypesIds = $db->query("SELECT id, name FROM `$db->ItemTypes` ORDER BY name")->fetchAll();
   	$itemTypes = [0 => 'Ne pas masquer'];
 		foreach ($itemTypesIds as $i => $data) {
@@ -193,18 +201,20 @@ public function getBrowseForm($type = "Items")
    	  }
 
       if ($type == 'Items' && $id <> 'plugin_citation') {
- 				$maskParalCollection = new Zend_Form_Element_Select('mask_col_' . $id);
- 				$maskParalCollection->setLabel("Masquer le bloc quand l'item appartient à la collection : ")
+ 				$maskParalCollection = new Zend_Form_Element_Multiselect('mask_col_' . $id);
+ 				$maskParalCollection->setLabel("Masquer le bloc quand l'item appartient à une des collections : ")
  				->setMultiOptions($collections);
    			isset($config[$id]['options']['mask_col']) ? $maskParalCollection->setValue($config[$id]['options']['mask_col']) : $maskParalCollection->setValue(0);
    			$maskParalCollection->setBelongsTo($id);
+   			$maskParalCollection->setAttrib('class', 'multiselect');
        	$form->addElement($maskParalCollection);
 
- 				$maskItemType = new Zend_Form_Element_Select('mask_it_' . $id);
+ 				$maskItemType = new Zend_Form_Element_Multiselect('mask_it_' . $id);
  				$maskItemType->setLabel("Masquer le bloc quand l'item est du type : ")
  				->setMultiOptions($itemTypes);
    			isset($config[$id]['options']['mask_it']) ? $maskItemType->setValue($config[$id]['options']['mask_it']) : $maskItemType->setValue(0);
    			$maskItemType->setBelongsTo($id);
+   			$maskItemType  ->setAttrib('class', 'multiselect');
        	$form->addElement($maskItemType);
       }
 
@@ -327,6 +337,18 @@ public function getBrowseForm($type = "Items")
      				$form->addElement($fieldName);
           }
 
+         	$bold = new Zend_Form_Element_Checkbox('bold_' . $id . '_' . $i);
+         	$bold->setLabel('Afficher en gras ');
+         	isset($config[$id]['bold_' . $id . '_' . $i]) ? $bold->setValue($config[$id]['bold_' . $id . '_' . $i]) : $bold->setValue(0);
+  				$bold->setBelongsTo($id);
+         	$form->addElement($bold);
+
+         	$retour = new Zend_Form_Element_Checkbox('retour_' . $id . '_' . $i);
+         	$retour->setLabel('Retour à la ligne ');
+         	isset($config[$id]['retour_' . $id . '_' . $i]) ? $retour->setValue($config[$id]['retour_' . $id . '_' . $i]) : $retour->setValue(0);
+  				$retour->setBelongsTo($id);
+         	$form->addElement($retour);
+
      			$presField = new Zend_Form_Element_Radio('pres_' . $id . '_' . $i);
      			$presField->setLabel('Afficher avec ');
      			$presField->setMultiOptions(array('liste' => 'Liste', 'virgule' => 'Virgule'));
@@ -355,13 +377,13 @@ public function getBrowseForm($type = "Items")
      			$form->addElement($ordreField);
 
          	$more = new Zend_Form_Element_Checkbox('more_' . $id . '_' . $i);
-         	$more->setLabel('Lire la suite ? ');
+         	$more->setLabel('Lire la suite ');
          	isset($config[$id]['more_' . $id . '_' . $i]) ? $more->setValue($config[$id]['more_' . $id . '_' . $i]) : $more->setValue(0);
   				$more->setBelongsTo($id);
          	$form->addElement($more);
 
          	$link = new Zend_Form_Element_Checkbox('link_' . $id . '_' . $i);
-         	$link->setLabel('Lier les valeurs du champ ? ');
+         	$link->setLabel('Lier les valeurs du champ ');
          	isset($config[$id]['link_' . $id . '_' . $i]) ? $link->setValue($config[$id]['link_' . $id . '_' . $i]) : $link->setValue(0);
   				$link->setBelongsTo($id);
          	$form->addElement($link);
@@ -414,6 +436,7 @@ public function getBrowseForm($type = "Items")
 	{
 		$lang = get_html_lang();
 		$type = $this->getParam('type');
+		$type ? null : $type = 'item';
 		$this->view->content = "<h3>UI Templates $type admin page</h3>";
 
 		switch ($type) {
@@ -491,6 +514,8 @@ public function getBrowseForm($type = "Items")
   					isset($values['tri_' . $bloc]) ? $config[$bloc]['options']['tri'] = $values['tri_' . $bloc] : $config[$bloc]['options']['tri'] = 'alpha';
   					isset($values['ordre_' . $bloc]) ? $config[$bloc]['options']['ordre'] = $values['ordre_' . $bloc] : $config[$bloc]['options']['ordre'] = 'asc';
   					isset($values['link_' . $bloc]) ? $config[$bloc]['options']['link'] = $values['link_' . $bloc] : $config[$bloc]['options']['link'] = 0;
+  					isset($values['bold_' . $bloc]) ? $config[$bloc]['options']['bold'] = $values['bold_' . $bloc] : $config[$bloc]['options']['bold'] = 0;
+  					isset($values['retour_' . $bloc]) ? $config[$bloc]['options']['retour'] = $values['retour_' . $bloc] : $config[$bloc]['options']['retour'] = 0;
 				  }
 					$config[$bloc]['options']['private'] = isset($values['private_' . $bloc]) ? $values['private_' . $bloc] : 1;
 					$config[$bloc]['options']['mask_col'] = isset($values['mask_col_' . $bloc]) ? $values['mask_col_' . $bloc] : 1;

@@ -3,7 +3,7 @@ queue_js_file('jquery.elevateZoom-3.0.8.min');
 echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'bodyclass' => 'files show ' . $bodyColumns)); ?>
 
 <?php
-  $title = "";
+  $titre = "";
 		if(metadata('file', array('Dublin Core', 'Title'))) {
 				$titres = metadata('file', array('Dublin Core', 'Title'), array('all' => true));
 				foreach ($titres as $i => $titre) {
@@ -17,24 +17,19 @@ echo head(array('title' => metadata('file', array('Dublin Core', 'Title')),'body
     $item = get_record_by_id('item', $itemId);
     $itemTitle = metadata($item, array('Dublin Core', 'Title'));
   ?>
-<?php
-  $auteurs = metadata('file', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '));
-/*
-  if ($auteurs) {
-    strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
-  } else {
-*/
-   $label = $this->controller->t($author_name_files);
-//   }
+<?php if ($auteurs = metadata('file', array('Dublin Core', 'Creator'), array('delimiter'=>' ; '))) :
+  $label =
+  strpos($auteurs, ';') ? $label = $this->controller->t('Auteurs') : $label = $this->controller->t('Auteur');
+  $label = $this->controller->t($author_name_files);
 ?>
+<br /><span class="dclabel" style="font-size:<?php echo $author_size_files ?>;"><?php echo $label; ?></span><!--  (DC.Creator) --> : <span class="dcvalue" style="font-size:<?php echo $author_size_items ?>;"><?php echo $auteurs;?></span><br />
+<?php endif; ?>
 
 
 <?php
   $translations = unserialize(base64_decode(get_option('ui_templates_translations')));
 ?>
 
-
-<span class='dclabel' style='float:left;clear:left;font-size:<?php echo $author_size_collections ?>;'><?php echo $label;?> : <!--  (DC.Creator) --> <?php echo $auteurs;?></span><br />
 <span style="float:left"><?php echo $this->controller->t('Notice') ?> : <a href="<?php echo WEB_ROOT;?>/items/show/<?php echo $itemId; ?>"><?php echo $itemTitle ?></a></span>
 
 <?php echo get_specific_plugin_hook_output('Coins', 'public_files_show', array('view' => $this, 'file' => $file));?>
@@ -59,54 +54,6 @@ jQuery(function ()  {
 </script>
 <?php endif ?>
 
-
-<style>
-#overlay {
- 	display:none;
-	width:99.9%;
- 	position:absolute;
-/* 	min-height:2000px; */
-	top:0;
-	left:0;
-	background:#eee;
-	z-index:10000000;
-	border:#111 1px solid;
-}
-#overlay-close {
-	position:absolute;
-	right:10px;
-	bottom:10px;
-}
-#left, #right {
-	position:relative;
-	width:49.5%;
-	border:#222 1px solid;
-	top:10px;
-	overflow:visible;
-	display:block;
-	margin-bottom:50px;
-}
-#left {
-	margin-left:5px;
-	clear:left;
-	float:left;
-}
-#right {
-	right:5px;
-	clear:both;
-	clear:right;
-	float:right;
-}
-#left img {
-	width:100%;
-}
-#plugin_transcript iframe {
-	width:100%;
-	clear:both;
-	overflow:visible;
-	display:none;
-}
-</style>
 <script>
 $ = jQuery;
 $('#display-overlay').on('click', function() {

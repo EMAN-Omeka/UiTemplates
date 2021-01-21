@@ -61,21 +61,6 @@ echo head(array('title' => metadata('collection', array('Dublin Core', 'Title'))
 <span class="dclabel" style="clear:both;display:block;float:right;"><?php echo $this->controller->t('Collection créée le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'added'))); ?>  </span>
 <span class="dclabel" style="clear:both;display:block;float:right;"><?php echo $this->controller->t('Dernière modification le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'modified'))); ?> </span>
 
-<style>
-.suite, .replier {
-  cursor: pointer;
-  font-style:italic;
-  font-weight: bold;
-  clear:both;
-  display:block;
-  float:right;
-}
-.uit-link {
-  display:block;
-  clear:both;
-}
-</style>
-
 <script>
 $ = jQuery;
 
