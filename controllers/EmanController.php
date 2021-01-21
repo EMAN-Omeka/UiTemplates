@@ -137,8 +137,8 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				  // Exception pour blocs Relations
   				  //TODO : revoir ce test
   				  if (substr($fieldName, 0, 4) == 'bloc' || in_array(substr($fieldName, 0, 16), array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations', 'plugin_tags')) || in_array(substr($fieldName, 0, 11), array('plugin_tags'))) {
-      				$config[$block]['bold_' . $fieldName] ? $bold = 'bold' : $bold = '';
-      				$config[$block]['retour_' . $fieldName] ? $retour = 'retour' : $retour = '';
+      				isset($config[$block]['bold_' . $fieldName]) ? $bold = 'bold' : $bold = '';
+      				isset($config[$block]['retour_' . $fieldName]) ? $retour = 'retour' : $retour = '';
 
     					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));
               $fieldContent = array();
@@ -147,6 +147,10 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
         					if (strlen($fieldInstance < 200 && $config[$block]['link_' . $fieldName])) {
           					$fieldInstance = "<span class='uit-field $retour'><a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>,&nbsp;</span>";
         					}
+                  // Field contains exactly an URL : link in a new window
+                  if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
+                          $fieldInstance = "<a target='_blank' href='$fieldInstance'>$fieldInstance</a>";
+                  }
     							$fieldContent[] = $fieldInstance;
     						}
     					}
