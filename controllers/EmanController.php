@@ -137,7 +137,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				  // Exception pour blocs Relations
   				  //TODO : revoir ce test
   				  if (substr($fieldName, 0, 4) == 'bloc' || in_array(substr($fieldName, 0, 16), array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations', 'plugin_tags')) || in_array(substr($fieldName, 0, 11), array('plugin_tags'))) {
-      				isset($config[$block]['bold_' . $fieldName]) ? $bold = 'bold' : $bold = '';
+      				isset($config[$block]['bold_' . $fieldName]) && $config[$block]['bold_' . $fieldName] == 1 || get_option('uit_boldTitles') ? $bold = 'bold' : $bold = '';
       				isset($config[$block]['retour_' . $fieldName]) ? $retour = 'retour' : $retour = '';
 
     					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));
@@ -296,6 +296,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 			Pdf -> DocViewer
 			Autre -> Affichage classique
 
+*/
 			set_loop_records('files', $item->Files);
 			foreach (loop('files') as $file):
   			if (in_array($file->getExtension(), array('jpg', 'JPG', 'jpeg', 'JPEG'))) {
@@ -314,7 +315,6 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				break;
   			}
 			endforeach;
-*/
 		}
 		$fileGallery = ob_get_contents();
 		ob_end_clean();

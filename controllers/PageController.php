@@ -54,6 +54,13 @@ public function getBrowseForm($type = "Items")
 		$maxLength->setAttrib('maxlength', 4);
 		$form->addElement($maxLength);
 
+		$boldTitles = new Zend_Form_Element_Checkbox('boldTitles');
+		$boldTitles->setLabel('Afficher tous les titres de champs en gras : ');
+		$bt = get_option('uit_boldTitles');
+		isset($bt) ? null : $bt = 1;
+		$boldTitles->setValue($bt);
+		$form->addElement($boldTitles);
+
     $submit = new Zend_Form_Element_Submit('submit');
     $submit->setLabel('Sauvegarder');
     $form->addElement($submit);
@@ -465,6 +472,7 @@ public function getBrowseForm($type = "Items")
           set_option('uit_nbBlocks', $blocs['nbBlocks']);
           set_option('uit_nbFields', $blocs['nbFields']);
           set_option('uit_maxLength', $blocs['maxLength']);
+          set_option('uit_boldTitles', $blocs['boldTitles']);
           $this->view->form = $form;
           $this->_helper->flashMessenger('UI Templates general options saved.');
           return;

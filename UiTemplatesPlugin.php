@@ -146,7 +146,7 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 	  $sql = "CREATE TABLE IF NOT EXISTS `$db->UiTemplates` (
 	  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
 	  `template_type` varchar(15) NOT NULL,
-	  `text` text COLLATE utf8_unicode_ci,
+	  `text` mediumtext COLLATE utf8_unicode_ci,
 	  PRIMARY KEY (`id`)
 	  ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci";
 	  $db->query($sql);
