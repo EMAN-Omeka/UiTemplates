@@ -61,6 +61,13 @@ public function getBrowseForm($type = "Items")
 		$boldTitles->setValue($bt);
 		$form->addElement($boldTitles);
 
+		$retTitle = new Zend_Form_Element_Checkbox('retTitles');
+		$retTitle->setLabel('Ajouter un retour chariot après le titre des champs : ');
+		$bt = get_option('uit_retTitles');
+		isset($bt) ? null : $bt = 1;
+		$retTitle->setValue($bt);
+		$form->addElement($retTitle);
+
     $submit = new Zend_Form_Element_Submit('submit');
     $submit->setLabel('Sauvegarder');
     $form->addElement($submit);
@@ -463,6 +470,9 @@ public function getBrowseForm($type = "Items")
 				$form = $this->getBrowseForm();
 				$this->view->type = "Options Générales";
 				break;
+      default :
+        $form = new Zend_Form();
+        break;
 		}
 		if ($this->_request->isPost()) {
 			$formData = $this->_request->getPost();
@@ -473,6 +483,7 @@ public function getBrowseForm($type = "Items")
           set_option('uit_nbFields', $blocs['nbFields']);
           set_option('uit_maxLength', $blocs['maxLength']);
           set_option('uit_boldTitles', $blocs['boldTitles']);
+          set_option('uit_retTitles', $blocs['retTitles']);
           $this->view->form = $form;
           $this->_helper->flashMessenger('UI Templates general options saved.');
           return;
@@ -626,4 +637,31 @@ public function getBrowseForm($type = "Items")
     );
 		return $form;
 	}
+
+  public function exportAction() {
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="uitemplates-options.json"');
+    $db = get_db();
+    $options = $db->query("SELECT * FROM `$db->UiTemplates` ORDER BY template_type")->fetchAll();
+    foreach ($options as $i => $option) {
+      echo json_encode(unserialize(base64_decode($option['text'])));
+    }
+    $this->view->layout()->disableLayout();
+    $this->_helper->viewRenderer->setNoRender(true);
+    $this->view->content = "";
+  }
+
+  public function importAction() {
+		if ($this->_request->isPost()) {
+			$formData = $this->_request->getPost();
+			$form = new Zend_Form();
+			if ($form->isValid($formData)) {
+        echo 'OK';
+			}
+    }
+    $this->view->layout()->disableLayout();
+    $this->_helper->viewRenderer->setNoRender(true);
+    $this->view->content = "";
+  }
+
 }

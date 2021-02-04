@@ -53,3 +53,6 @@ li .uit-field {
   border: 1px solid #ac2f2f;
   border-radius: 5px;
 }
+#primary #plugin_files {
+/*   padding:0 !important; */
+}

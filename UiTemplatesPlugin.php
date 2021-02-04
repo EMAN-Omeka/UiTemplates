@@ -46,6 +46,19 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   				)
   		);
 
+  		$router->addRoute(
+  				'uitemplates_item_export',
+  				new Zend_Controller_Router_Route(
+  						'uitemplate/export',
+  						array(
+  								'module' => 'ui-templates',
+  								'controller'   => 'page',
+  								'action'       => 'export',
+  								'type'				 => ''
+  						)
+  				)
+  		);
+
   		if (! is_admin_theme()) {
 	  		// If template is used, override Omeka items/show display
 	  		$ui_template = get_option('use_ui_items_template');

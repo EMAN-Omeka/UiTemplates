@@ -138,8 +138,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				  //TODO : revoir ce test
   				  if (substr($fieldName, 0, 4) == 'bloc' || in_array(substr($fieldName, 0, 16), array('plugin_relations', 'plugin_collection_relations', 'plugin_file_relations', 'plugin_tags')) || in_array(substr($fieldName, 0, 11), array('plugin_tags'))) {
       				isset($config[$block]['bold_' . $fieldName]) && $config[$block]['bold_' . $fieldName] == 1 || get_option('uit_boldTitles') ? $bold = 'bold' : $bold = '';
-      				isset($config[$block]['retour_' . $fieldName]) ? $retour = 'retour' : $retour = '';
-
+      				isset($config[$block]['retour_' . $fieldName]) && $config[$block]['retour_' . $fieldName] == 1 || get_option('uit_retTitles') == 1 ? $retour = 'retour' : $retour = '';
     					$fieldData = metadata($t, array($elements[$dataId]['set'], $elements[$dataId]['name']), array('no_filter' => true, 'all' => true));
               $fieldContent = array();
     					foreach($fieldData as $i => $fieldInstance ) {
@@ -286,35 +285,37 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		$fileGallery = "";
 		if (metadata('item', 'has files')) {
 			ob_start(); // We need to capture the UniversalViwer plugin ouput
-  	  echo get_specific_plugin_hook_output('UniversalViewer', 'public_items_show', array(
-        'record' => $item,
-        'view' => $this->view,
-      ));
-/*
-			Affichage du visualiseur en fonction dy type de fichier
-			jpg -> Bookreader
-			Pdf -> DocViewer
-			Autre -> Affichage classique
-
-*/
-			set_loop_records('files', $item->Files);
-			foreach (loop('files') as $file):
-  			if (in_array($file->getExtension(), array('jpg', 'JPG', 'jpeg', 'JPEG'))) {
-  				fire_plugin_hook('book_reader_item_show', array(
-    				'view' => $this,
-    				'item' => $item,
-    				'page' => '0',
-    				'embed_functions' => false,
-    				'mode_page' => 1,
-  				));
-  				break;
-  			} elseif ($file->getExtension() =='pdf') {
-  				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'. metadata($file,'filename').'"></iframe>';	break;
-  			} else {
-  				echo files_for_item();
-  				break;
-  			}
-			endforeach;
+			if (plugin_is_active('UniversalViewer')) {
+    	  echo get_specific_plugin_hook_output('UniversalViewer', 'public_items_show', array(
+          'record' => $item,
+          'view' => $this->view,
+        ));
+      } else {
+        /*
+  			Affichage du visualiseur en fonction dy type de fichier
+  			jpg -> Bookreader
+  			Pdf -> DocViewer
+  			Autre -> Affichage classique
+        */
+  			set_loop_records('files', $item->Files);
+  			foreach (loop('files') as $file):
+    			if (in_array($file->getExtension(), array('jpg', 'JPG', 'jpeg', 'JPEG'))) {
+    				fire_plugin_hook('book_reader_item_show', array(
+      				'view' => $this,
+      				'item' => $item,
+      				'page' => '0',
+      				'embed_functions' => false,
+      				'mode_page' => 1,
+    				));
+    				break;
+    			} elseif ($file->getExtension() =='pdf') {
+    				echo  '<iframe width=100% height=800 src="' . WEB_ROOT . '/files/original/'. metadata($file,'filename').'"></iframe>';	break;
+    			} else {
+    				echo files_for_item();
+    				break;
+    			}
+  			endforeach;
+  		}
 		}
 		$fileGallery = ob_get_contents();
 		ob_end_clean();
