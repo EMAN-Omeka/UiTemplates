@@ -95,7 +95,6 @@
  $ = jQuery;
 
  $(document).ready(function(){
-/*
    $('#files-carousel').slick({
 //     autoplay: true,
 //     autoplaySpeed: 2000,
@@ -106,7 +105,6 @@
 //     lazyLoad: 'progressive',
     pauseOnFocus: true,
   });
-*/
   $('.suite').click(function() {
     $(this).parent().parent().find('.fieldcontentcomplet').show();
     $(this).parent().parent().find('.fieldcontentshort').hide();

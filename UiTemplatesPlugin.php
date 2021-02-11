@@ -11,11 +11,12 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 {
 
   protected $_hooks = array(
-  		'define_acl',
-  		'install',
-  		'uninstall',
-  		'define_routes',
-  		'public_head',
+		'define_acl',
+		'install',
+		'uninstall',
+		'define_routes',
+		'public_head',
+		'admin_head',
   );
 
   protected $_filters = array(
@@ -27,6 +28,11 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
     queue_css_file('ui-templates');
   }
 
+  function hookAdminHead()
+  {
+    queue_css_file('ui-templates');
+  }
+
   function hookDefineRoutes($args)
   {
 
@@ -34,26 +40,39 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
 
   		// Template configuration pages
   		$router->addRoute(
-  				'uitemplates_item_form',
-  				new Zend_Controller_Router_Route(
-  						'uitemplate/:type',
-  						array(
-  								'module' => 'ui-templates',
-  								'controller'   => 'page',
-  								'action'       => 'index',
-  								'type'				 => ''
-  						)
-  				)
+				'uitemplates_item_form',
+				new Zend_Controller_Router_Route(
+						'uitemplate/:type',
+						array(
+							'module' => 'ui-templates',
+							'controller'   => 'page',
+							'action'       => 'index',
+							'type'				 => ''
+						)
+				)
   		);
 
   		$router->addRoute(
-  				'uitemplates_item_export',
+				'uitemplates_item_export',
+				new Zend_Controller_Router_Route(
+					'uitemplate/export',
+					array(
+						'module' => 'ui-templates',
+						'controller'   => 'page',
+						'action'       => 'export',
+						'type'				 => ''
+					)
+				)
+  		);
+
+  		$router->addRoute(
+  				'uitemplates_item_import',
   				new Zend_Controller_Router_Route(
-  						'uitemplate/export',
+  						'uitemplate/import',
   						array(
   								'module' => 'ui-templates',
   								'controller'   => 'page',
-  								'action'       => 'export',
+  								'action'       => 'import',
   								'type'				 => ''
   						)
   				)

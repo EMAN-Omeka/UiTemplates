@@ -1,7 +1,8 @@
 <?php
 class UiTemplates_PageController extends Omeka_Controller_AbstractActionController
 {
-  public function init() {
+  public function init()
+  {
     $this->languages = null;
     if (plugin_is_active('Babel')) {
       $this->languages = explode("#", get_option('languages_options'));
@@ -9,8 +10,8 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
     }
   }
 
-public function getBrowseForm($type = "Items")
-	{
+  public function getBrowseForm($type = "Items")
+  {
     $db = get_db();
     // Retrieve config for this type from DB
   	$config = $db->query("SELECT * FROM `$db->UiTemplates` WHERE template_type = '$type'")->fetchAll();
@@ -181,10 +182,10 @@ public function getBrowseForm($type = "Items")
    			$titleField->setBelongsTo($id);
    			$titlesFields[] = $titleField;
      }
-       if ($blockTitleValue) {
- 			$blockTitle->setValue("<h2>$block : $blockTitleValue</h2>");
+     if ($blockTitleValue) {
+ 		   $blockTitle->setValue("<h2>$block : $blockTitleValue</h2>");
      } else {
- 			$blockTitle->setValue("<h2><em>$block : Sans titre $titleLang</em></h2>");
+ 			 $blockTitle->setValue("<h2><em>$block : Sans titre $titleLang</em></h2>");
      }
  			$form->addElement($blockTitle);
  			foreach($titlesFields as $i => $titleField) {
@@ -566,6 +567,51 @@ public function getBrowseForm($type = "Items")
 		$this->view->form = $form;
 	}
 
+  public function exportAction() {
+    $instance = substr(BASE_DIR, strrpos(BASE_DIR, '/') + 1) . '-' . date('Y-m-d');
+    $fileName = "uitemplates-options-" . $instance . ".json";
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $fileName . '"');
+    $db = get_db();
+    $options = $db->query("SELECT * FROM `$db->UiTemplates` ORDER BY template_type")->fetchAll();
+    $file = [];
+    foreach ($options as $i => $option) {
+      $file['options'][$option['template_type']] = unserialize(base64_decode($option['text']));
+    }
+    echo json_encode($file);
+    $this->view->layout()->disableLayout();
+    $this->_helper->viewRenderer->setNoRender(true);
+    $this->view->content = "";
+  }
+
+  public function importAction() {
+		if ($this->_request->isPost()) {
+			$formData = $this->_request->getPost();
+			$form = new Zend_Form();
+			if ($form->isValid($formData)) {
+        $upload = new Zend_File_Transfer();
+        $files = $upload->getFileInfo();
+        if (!$files) {
+            print "Veuillez sélectionner un fichier.";
+        } else {
+          $file = $files['file'];
+          $upload->receive();
+          $options = json_decode(file_get_contents($upload->getFileName()), true);
+  				$db = get_db();
+  				$db->query("DELETE FROM `$db->UiTemplates`");
+          foreach ($options['options'] as $type => $data) {
+    				$data = base64_encode(serialize($data));
+    				$db->query("INSERT INTO `$db->UiTemplates` VALUES (null, '$type', '$data')");
+          }
+  				$this->_helper->flashMessenger('UI Templates options imported from file "' . substr($upload->getFileName(), 5) . '".');
+        }
+			}
+    }
+    $this->view->layout()->disableLayout();
+    $this->_helper->viewRenderer->setNoRender(true);
+    $this->view->content = "";
+  }
+
 	private function triBlocs($blocs) {
 		// Prepare array : copy order column for sorting
 		foreach ($blocs as $key => $bloc) {
@@ -586,7 +632,6 @@ public function getBrowseForm($type = "Items")
 	private function prettifyForm($form) {
 		// Prettify form
 		$blocks = $form->getElements();
-
     foreach ($blocks as $elem) {
       if ($elem instanceof Zend_Form_Element_Hidden) {
         $elem->removeDecorator('label')->removeDecorator('HtmlTag');
@@ -637,31 +682,4 @@ public function getBrowseForm($type = "Items")
     );
 		return $form;
 	}
-
-  public function exportAction() {
-    header('Content-Type: application/json');
-    header('Content-Disposition: attachment; filename="uitemplates-options.json"');
-    $db = get_db();
-    $options = $db->query("SELECT * FROM `$db->UiTemplates` ORDER BY template_type")->fetchAll();
-    foreach ($options as $i => $option) {
-      echo json_encode(unserialize(base64_decode($option['text'])));
-    }
-    $this->view->layout()->disableLayout();
-    $this->_helper->viewRenderer->setNoRender(true);
-    $this->view->content = "";
-  }
-
-  public function importAction() {
-		if ($this->_request->isPost()) {
-			$formData = $this->_request->getPost();
-			$form = new Zend_Form();
-			if ($form->isValid($formData)) {
-        echo 'OK';
-			}
-    }
-    $this->view->layout()->disableLayout();
-    $this->_helper->viewRenderer->setNoRender(true);
-    $this->view->content = "";
-  }
-
 }

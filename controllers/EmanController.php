@@ -122,7 +122,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
     						if ($fields['name_' . $fieldName . '_' . $this->lang] <> null) {
     							$fieldTitle = $fields['name_' . $fieldName . '_' . $this->lang];
     						} else {
-    							$fieldTitle = $elements[$dataId]['name'];
+    							$fieldTitle = __($elements[$dataId]['name']);
     						}
     				  }
     				} else {
@@ -130,7 +130,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
     						if ($fields['name_' . $fieldName] <> null) {
     							$fieldTitle = $fields['name_' . $fieldName];
     						} else {
-    							$fieldTitle = $elements[$dataId]['name'];
+    							$fieldTitle = __($elements[$dataId]['name']);
     						}
     				  }
     				}
@@ -344,7 +344,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 		$db = get_db();
 		$transcriptTagId = $db->query("SELECT id FROM `$db->Elements` WHERE `name` = 'Transcription'")->fetchObject();
 		if (metadata($item, 'has files')) {
-			$FilesGallery .= $this->t("En passant la souris sur une vignette, le titre de l'image apparait.") . "<br /><br />";
+			$FilesGallery .= $this->t("En passant la souris sur une vignette, le titre de l'image apparaît.") . "<br /><br />";
 			$FilesGallery .= '<span>' . count($item->Files) . ' ' . $this->t('Fichier(s)') . '</span><div id="itemfiles" class="element">';
 			$fileIds = [];
 			foreach ($item->Files as $file) {
@@ -486,7 +486,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
     if ($nbItems > 0) {
       $nbItems == 1 ? $notice = $this->t('notice') : $notice = $this->t('notices');
       $content .= "<h4>$nbItems $notice " . $this->t('dans cette collection') . "</h4>";
-      $content .= $this->t("En passant la souris sur une vignette, le titre de la notice apparait.") . "<br /><br />" . $this->t($message) . " :<br /><br />";
+      $content .= $this->t("En passant la souris sur une vignette, le titre de la notice apparaît.") . "<br /><br />" . $this->t($message) . " :<br /><br />";
       $items = get_records('Item', array('collection_id' => metadata('collection', 'id')), $nbNotices);
 
       usort($items, function($a ,$b) {return $a->id > $b->id ? 1 : -1;});
