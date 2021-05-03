@@ -510,7 +510,7 @@ class UiTemplates_PageController extends Omeka_Controller_AbstractActionControll
 				// Tri des blocs avant sauvegarde
 				$blocs = $this->triBlocs($blocs);
 				foreach($blocs as $bloc => $values) {
-  				if ($bloc == 'plugin_item_relations') {
+  				if ($bloc == 'plugin_relations') {
     				set_option('ir_intitule', $values['ir_intitule']);
     				set_option('ir_intitule_obj', $values['ir_intitule_obj']);
   				}

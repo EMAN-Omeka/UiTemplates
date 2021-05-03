@@ -54,8 +54,7 @@ li .uit-field {
   border-radius: 5px;
 }
 input[type=button],
-#fileinfo label,
-button {
+#fileinfo label {
     background: #a4c637;
     background: -webkit-linear-gradient(top, #A4C637, #75940A);
     background: -moz-linear-gradient(top, #A4C637, #75940A);
@@ -94,7 +93,7 @@ button {
   box-shadow: 0px 1px 0px 0px #b87979 inset, 0px -1px 0px 0px #5e3030 inset, 0px 2px 2px 0px #d4d4d4;
   border: 1px solid #7E432C;
 }
-.file {
+#file-browse {
   opacity: 0;
   width: 0.1px;
   height: 0.1px;

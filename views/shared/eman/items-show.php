@@ -1,13 +1,43 @@
 <?php
-  echo head(array('title' => metadata('item', array('Dublin Core', 'Title')),'bodyclass' => 'items show ' . $bodyColumns));
+/*
+  $db = get_db();
+  $coords = $db->query("SELECT latitude, longitude FROM `$db->Locations` WHERE item_id = " . $item->id)->fetchObject();
+//   $coords = $db->query("SELECT latitude, longitude FROM `$this->_db->Locations` WHERE item_id = " . $item->id)->fetchObject();
+  $coordonnees = $coords->longitude . ',' . $coords->latitude;
+  Zend_Debug::dump($coordonnees);
 
-  if(metadata('item', array('Dublin Core', 'Title'))) {
-  	$titres = metadata('item', array('Dublin Core', 'Title'), array('all' => true));
+include("/data/www/Omeka/bacasable/plugins/Neatline/lib/proj4php/vendor/autoload.php");
+
+use proj4php\Proj4php;
+use proj4php\Proj;
+use proj4php\Point;
+
+// Initialise Proj4
+$proj4 = new Proj4php();
+
+// Create two different projections. 'EPSG:4326','EPSG:3857'
+$projL93    = new Proj('EPSG:4326', $proj4);
+$projWGS84  = new Proj('EPSG:3857', $proj4);
+
+// Create a point.
+$pointSrc = new Point($coords->longitude, $coords->latitude, $projL93);
+echo "Source: " . $pointSrc->toShortString() . " in L93 <br>";
+
+// Transform the point between datums.
+$pointDest = $proj4->transform($projWGS84, $pointSrc);
+echo "Conversion: " . $pointDest->toShortString() . " in WGS84<br><br>";
+*/
+
+  echo head(array('title' => metadata('item', array('Dublin Core', 'Title')), 'bodyclass' => 'items show ' . $bodyColumns));
+
+  if ($titres = metadata('item', array('Dublin Core', 'Title'), array('all' => true))) {
   	foreach ($titres as $i => $titre) {
   		echo "<span id='doc-title' style='font-size:$title_size_items; clear:both;display:block;'>$titre</span>";
   	}
+  } elseif ($titres) {
+  	echo "<span id='doc-title' style='font-size:$title_size_items'>" . $titres[0] . "</span>";
   } else {
-  	echo "<span id='doc-title' style='font-size:$title_size_items'>$title_items</span>";
+  	echo "<span id='doc-title' style='font-size:$title_size_items'>[Sans titre]</span>";
   }
 
   echo get_specific_plugin_hook_output('Coins', 'public_items_show', array('view' => $this, 'item' => $item));
@@ -23,6 +53,7 @@
 <?php echo $collection_link; ?>
 
 <?php echo $content; ?>
+
 <span  class="dclabel" style='float:right;clear:right;'><?php echo str_replace('Notice créée par', $this->controller->t('Notice créée par'), get_specific_plugin_hook_output('Bookmarks', 'public_items_show', array('view' => $this, 'item' => $item))); ?></span>
 <span  class="dclabel" style='float:right;clear:right;'><?php echo $this->controller->t('Notice créée le') . ' ' . date('d/m/Y', strtotime(metadata('item', 'added'))); ?> </span>
 <span  class="dclabel" style='float:right;clear:right;'><?php echo $this->controller->t('Dernière modification le') . ' ' . date('d/m/Y', strtotime(metadata('item', 'modified'))); ?> </span>
@@ -90,33 +121,5 @@
   </ul>
 <?php } ?>
 <div id='transcripted' style='display:none;'><?php echo $markTranscripted ?></div>
-
- <script>
- $ = jQuery;
-
- $(document).ready(function(){
-   $('#files-carousel').slick({
-//     autoplay: true,
-//     autoplaySpeed: 2000,
-		dots: true,
-		appendDots: '#plugin_gallery > span',
-    rows: 4,
-    slidesPerRow: 4,
-//     lazyLoad: 'progressive',
-    pauseOnFocus: true,
-  });
-  $('.suite').click(function() {
-    $(this).parent().parent().find('.fieldcontentcomplet').show();
-    $(this).parent().parent().find('.fieldcontentshort').hide();
-  });
-  $('.replier').click(function() {
-    $(this).parent().parent().find('.fieldcontentcomplet').hide();
-    $(this).parent().parent().find('.fieldcontentshort').show();
-  });
-  $('#transcripted > span').each(function (i, e) {
-    $('#itemfiles').find('div#' + e.innerHTML).addClass('transcripted');
-  });
-});
- </script>
 
 <?php echo foot(); ?>

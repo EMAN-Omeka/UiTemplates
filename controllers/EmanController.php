@@ -144,16 +144,16 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
     					foreach($fieldData as $i => $fieldInstance ) {
     						if ($fieldInstance) {
         					if (strlen($fieldInstance < 200 && $config[$block]['link_' . $fieldName])) {
-          					$fieldInstance = "<span class='uit-field $retour'><a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>,&nbsp;</span>";
+          					$fieldInstance = "<a target='_blank' href='" . WEB_ROOT . "/items/browse?field=$dataId&val=$fieldInstance'>$fieldInstance</a>";
         					}
                   // Field contains exactly an URL : link in a new window
                   if (filter_var($fieldInstance, FILTER_VALIDATE_URL)) {
-                          $fieldInstance = "<a target='_blank' href='$fieldInstance'>$fieldInstance</a>";
+                    $fieldInstance = "<a target='_blank' href='$fieldInstance'>$fieldInstance</a>";
                   }
     							$fieldContent[] = $fieldInstance;
     						}
     					}
-    					// If field contains something, display it
+    					// If field is an array ...
               if (count($fieldContent) > 1) {
                 setlocale(LC_COLLATE, 'fr_FR.UTF-8');
                 if ($config[$block]['ordre_' . $fieldName] == 'asc') {
@@ -170,10 +170,9 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
                   }
                 }
               } elseif ($fieldContent) {
-                if (strrpos($fieldContent[0], ',') <> 0 && strrpos($fieldContent[0], 'uit-field')) {
-                 $fieldContent = substr_replace($fieldContent[0], '', strrpos($fieldContent[0], ','), 1);
-                } else {
-                 $fieldContent = $fieldContent[0];
+                $fieldContent = $fieldContent[0];
+                if (strrpos($fieldContent, ',') <> 0 && strrpos($fieldContent, 'uit-field')) {
+                 $fieldContent = substr_replace($fieldContent, '', strrpos($fieldContent, ','), 1);
                 }
               }
               // Remember fieldTitle in case we must replace blockTitle with it later
@@ -184,14 +183,14 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
                 $maxLength ? null : $maxLength = 500;
       					// If generating PDF or text too short, display as it is ...
       					if (isset($_GET['context']) && $_GET['context'] == 'pdf' || strlen($fieldContent) < $maxLength || $config[$block]['more_' . $fieldName] != 1) {
-      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'><div class='uit-field-wrapper'><span class='field-uitemplates-title $bold'>$fieldTitle</span><span class='uit-field $retour'>$fieldContent</span></div></div>";
+      						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'><div class='uit-field-wrapper'><span class='field-uitemplates-title $bold $retour'>$fieldTitle</span><span class='uit-field $retour'>$fieldContent</span></div></div>";
       					} else {
         					// ... else hide text above $maxlength
                   $fieldContentShort = $this->truncateHtml($fieldContent, $maxLength, ' ...', false, true);
                   $fieldContentShort = tidy_repair_string($fieldContentShort, array('show-body-only' => true));
                   $fieldContentShort .= "<span class='suite'> ... ". $this->t('Lire la suite') . "</span>";
                   $fieldContentComplet = $fieldContent . '<span class="replier"><br />' . $this->t('Retour à la version réduite') . '</span></span>';
-      	  				$fieldTitle = "<span class='field-uitemplates-title $bold'>$fieldTitle</span> : ";
+      	  				$fieldTitle = "<span class='field-uitemplates-title $bold $retour'>$fieldTitle</span>";
       						$blockContent .= "<div class='field-uitemplates field-uitemplates-$dataId' id='$fieldName'>$fieldTitle<div class='uit-field-wrapper'><span class='uit-field $retour'><div class='fieldcontentshort'>$fieldContentShort</div><div class='fieldcontentcomplet' style='display:none;'>$fieldContentComplet</div></span></div></div>";
                 }
     					}
@@ -207,7 +206,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
                 $blockTitle = $config[$block]['options']['title'];
               }
             } else {
-          		$blockContent = str_replace("class='field-uitemplates-title'", "class='field-uitemplates-title hidden'", $blockContent);
+          		$blockContent = str_replace("field-uitemplates-title", "field-uitemplates-title hidden", $blockContent);
       		  }
       		} else {
         		$blockTitle = '';
@@ -215,8 +214,7 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
   				isset($blockTitle) ? $blockTitle = "<h2>" . $blockTitle . "</h2>" : $blockTitle = '';
   				// Affichage du bloc ?
   				if (! isset($config[$block]['options']['mask_it'])) : $config[$block]['options']['mask_it'] = 0; endif;
-          if (($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) && ! in_array($entity->collection_id, (array) $config[$block]['options']['mask_col']) && ! in_array($entity->item_type_id, (array) $config[$block]['options']['mask_it']) || $type <> 'Item') {
-
+          if (($config[$block]['options']['private'] == 0 || ($config[$block]['options']['private'] == 1 && current_user())) && ! in_array($entity->collection_id, (array) $config[$block]['options']['mask_col']) && ! in_array($entity->item_type_id, (array) $config[$block]['options']['mask_it'])) {
    				  $content[$block] = "<div class='field-uitemplates field-uitemplates-$block block-uitemplates' id='$block'>$blockTitle $blockContent</div>";
   				}
   			}
@@ -347,17 +345,20 @@ class UiTemplates_EmanController extends Omeka_Controller_AbstractActionControll
 			$FilesGallery .= $this->t("En passant la souris sur une vignette, le titre de l'image apparaît.") . "<br /><br />";
 			$FilesGallery .= '<span>' . count($item->Files) . ' ' . $this->t('Fichier(s)') . '</span><div id="itemfiles" class="element">';
 			$fileIds = [];
+			$FilesGallery .= '<div id="files-carousel" style="width:450px;margin:0 auto;">';
 			foreach ($item->Files as $file) {
   			if ($transcriptTagId) {
     			if ($db->query("SELECT 1 FROM `$db->ElementTexts` WHERE record_type='File' AND record_id = " . $file->id . " AND element_id = " . $transcriptTagId->id)->fetchAll()) {
       			$fileIds[] = "<span>" . $file->id . "</span>";
     			}
   			}
+        $FilesGallery .= '<div id="' . $file->id . '" class="item-file image-jpeg">';
+        $FilesGallery .= '<a href="' . WEB_ROOT . '/files/show/' . $file->id . '">';
+        $FilesGallery .= '<img class="thumb" data-lazy="' . WEB_ROOT .'/files/square_thumbnails/' . str_replace(['jpeg', 'png', 'gif'], 'jpg', strtolower($file->filename)) . '" alt="' . $file->title . '" title="' . $file->title . '" />';
+        $FilesGallery .= '</a></div>';
 			}
 			$this->view->markTranscripted = implode('', $fileIds);
-			$FilesGallery .= '<div id="files-carousel" style="width:450px;margin:0 auto;">';
-			$FilesGallery .= file_markup($item->Files, array('linkToMetadata' => true));
-			$FilesGallery .= '</div></div>';
+      $FilesGallery .= '</div></div>';
 		}
 		$FilesGallery = preg_replace('/<h3>[^>]+\<\/h3>/i', "", $FilesGallery);
 		return $FilesGallery;

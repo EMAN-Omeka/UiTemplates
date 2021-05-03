@@ -26,7 +26,13 @@ class UiTemplatesPlugin extends Omeka_Plugin_AbstractPlugin
   function hookPublicHead()
   {
     queue_css_file('ui-templates');
+    queue_js_file('ui-templates');
+    queue_css_file('slick');
+    queue_css_file('slick-theme');
+    queue_js_url('//code.jquery.com/jquery-migrate-1.2.1.min.js');
+    queue_js_file('slick/slick.min');
   }
+
 
   function hookAdminHead()
   {

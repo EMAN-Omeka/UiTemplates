@@ -58,8 +58,8 @@ echo head(array('title' => metadata('collection', array('Dublin Core', 'Title'))
 <?php echo $content; ?>
 
 <span class="dclabel" style='float:right;clear:right;'><?php echo str_replace('Collection créée par', $this->controller->t('Collection créée par'), get_specific_plugin_hook_output('Bookmarks', 'public_collections_show', array('view' => $this, 'collection' => $collection))); ?></span>
-<span class="dclabel" style="clear:both;display:block;float:right;"><?php echo $this->controller->t('Collection créée le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'added'))); ?>  </span>
-<span class="dclabel" style="clear:both;display:block;float:right;"><?php echo $this->controller->t('Dernière modification le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'modified'))); ?> </span>
+<span class="dclabel" style="float:right;clear:right;"><?php echo $this->controller->t('Collection créée le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'added'))); ?>  </span>
+<span class="dclabel" style="float:right;clear:right;"><?php echo $this->controller->t('Dernière modification le') . ' ' . date('d/m/Y', strtotime(metadata('collection', 'modified'))); ?> </span>
 
 <script>
 $ = jQuery;
